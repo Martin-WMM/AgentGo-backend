@@ -1,5 +1,6 @@
 import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
 import org.gradle.api.tasks.testing.Test
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
@@ -21,6 +22,9 @@ subprojects {
 
     extensions.configure<KotlinJvmProjectExtension> {
         jvmToolchain(25)
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_25)
+        }
     }
 
     tasks.withType<Test>().configureEach {
