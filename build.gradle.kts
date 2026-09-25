@@ -4,8 +4,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
-    kotlin("jvm") version "2.2.20" apply false
-    kotlin("plugin.spring") version "2.2.20" apply false
+    kotlin("jvm") version "2.3.0" apply false
+    kotlin("plugin.spring") version "2.3.0" apply false
     id("org.springframework.boot") version "4.1.1" apply false
     id("org.jetbrains.kotlinx.kover") version "0.9.1" apply false
 }
