@@ -1,11 +1,13 @@
 plugins {
-    application
+    id("org.springframework.boot")
 }
 
 dependencies {
-    implementation(project(":agentgo-core"))
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation(kotlin("reflect"))
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 }
 
-application {
-    mainClass.set("com.agentgo.app.MainKt")
+springBoot {
+    buildInfo()
 }

@@ -1,30 +1,37 @@
 # AgentGo Backend
 
-AgentGo 的后端服务，采用 Kotlin 与 Gradle 多模块构建。
+AgentGo Backend is a Kotlin, Gradle, Spring MVC, and Spring Boot 4 application.
 
-## 开发流程
+## Development workflow
 
-代码变更遵循：`main → release/* → feature/* 或 fix/* → PR → release/* → PR → main`。
+Code changes follow: `main → release/* → feature/* or fix/* → PR → release/* → PR → main`.
 
-- `main` 和 `release/*` 仅接受 Pull Request 合并。
-- 每次提交必须符合 `<emoji><type>: <message>` 格式，且单次提交变更少于 300 行。
-- Pull Request 必须通过 Merge CI、测试和 85% 以上的代码覆盖率检查。
+- `main` and `release/*` accept changes only through pull requests.
+- Every commit must use `<emoji><type>: <message>` and change fewer than 300 lines.
+- Every pull request must pass Merge CI, tests, and the 85% code coverage gate.
 
-## 本地构建
+## Local build
 
-安装 JDK 21 后执行：
+Install JDK 21 and run:
 
 ```bash
 ./gradlew build
 ```
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 .\gradlew.bat build
 ```
 
-## 模块
+## Application
 
-- `agentgo-core`：领域模型与核心服务接口。
-- `agentgo-app`：应用启动模块。
+- `agentgo-app` is the only project module.
+- It provides the Spring MVC HTTP API.
+- The baseline uses Spring Boot 4.1.1, Kotlin 2.2.x, Java 21, and Gradle 8.14+.
+
+## Health endpoint
+
+```text
+GET /api/v1/health
+```

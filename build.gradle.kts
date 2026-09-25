@@ -3,7 +3,9 @@ import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
-    kotlin("jvm") version "2.1.21" apply false
+    kotlin("jvm") version "2.2.20" apply false
+    kotlin("plugin.spring") version "2.2.20" apply false
+    id("org.springframework.boot") version "4.1.1" apply false
     id("org.jetbrains.kotlinx.kover") version "0.9.1" apply false
 }
 
@@ -14,6 +16,7 @@ allprojects {
 
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "org.jetbrains.kotlin.plugin.spring")
     apply(plugin = "org.jetbrains.kotlinx.kover")
 
     extensions.configure<KotlinJvmProjectExtension> {
@@ -26,7 +29,6 @@ subprojects {
 
     dependencies {
         "testImplementation"(kotlin("test"))
-        "testImplementation"("org.junit.jupiter:junit-jupiter:5.12.2")
     }
 
     extensions.configure<KoverProjectExtension> {
