@@ -1,3 +1,7 @@
+import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
+import org.gradle.api.tasks.testing.Test
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+
 plugins {
     kotlin("jvm") version "2.1.21" apply false
     id("org.jetbrains.kotlinx.kover") version "0.9.1" apply false
@@ -12,11 +16,11 @@ subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.jetbrains.kotlinx.kover")
 
-    kotlin {
+    extensions.configure<KotlinJvmProjectExtension> {
         jvmToolchain(21)
     }
 
-    tasks.test {
+    tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
 
@@ -25,7 +29,7 @@ subprojects {
         "testImplementation"("org.junit.jupiter:junit-jupiter:5.12.2")
     }
 
-    kover {
+    extensions.configure<KoverProjectExtension> {
         reports {
             verify {
                 rule {
