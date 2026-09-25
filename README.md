@@ -12,7 +12,7 @@ Code changes follow: `main → release/* → feature/* or fix/* → PR → relea
 
 ## Local build
 
-Install JDK 21 and run:
+Install JDK 25 and run:
 
 ```bash
 ./gradlew build
@@ -28,7 +28,7 @@ Windows PowerShell:
 
 - `agentgo-app` is the only project module.
 - It provides the Spring MVC HTTP API.
-- The baseline uses Spring Boot 4.1.1, Kotlin 2.2.x, Java 21, and Gradle 8.14+.
+- The baseline uses Spring Boot 4.1.1, Kotlin 2.2.x, Java 25 LTS, and Gradle 8.14+.
 - Actuator exposes health, info, and Prometheus metrics endpoints.
 - Micrometer Tracing exports OTLP traces when an OpenTelemetry collector is available.
 - Spring Data JPA and PostgreSQL are configured through environment variables.
