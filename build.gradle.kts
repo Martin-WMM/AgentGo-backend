@@ -23,7 +23,7 @@ subprojects {
     extensions.configure<KotlinJvmProjectExtension> {
         jvmToolchain(25)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_25)
+            jvmTarget.set(JvmTarget.fromTarget("25"))
         }
     }
 
