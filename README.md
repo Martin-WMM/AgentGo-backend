@@ -57,3 +57,4 @@ GET /actuator/prometheus
 | `DATABASE_PASSWORD` | `agentgo` | PostgreSQL password |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318/v1/traces` | OTLP trace endpoint |
 | `TRACING_SAMPLING_PROBABILITY` | `0.1` | Trace sampling probability |
+| `OPENAI_API_KEY` | unset | Spring AI OpenAI model access |
