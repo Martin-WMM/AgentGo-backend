@@ -22,7 +22,7 @@ jobs:
           if [ -z "$commits" ]; then commits="$(git rev-list --no-merges -n 1 HEAD)"; fi
           for commit in $commits; do
             message="$(git log -1 --format=%s "$commit")"
-            if ! [[ "$message" =~ ^[^[:ascii:]]+(feat|fix|chore|docs|refactor|test|build|ci|perf|style|revert):[[:space:]].+ ]]; then
+            if ! printf '%s\n' "$message" | grep -Pq '^[^\x00-\x7F]+(feat|fix|chore|docs|refactor|test|build|ci|perf|style|revert): .+'; then
               echo "Invalid commit format: $message"
               exit 1
             fi
