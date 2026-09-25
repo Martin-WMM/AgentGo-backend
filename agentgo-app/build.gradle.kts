@@ -13,3 +13,16 @@ dependencies {
 springBoot {
     buildInfo()
 }
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "com.agentgo.app.AgentGoApplication",
+                    "com.agentgo.app.AgentGoApplicationKt",
+                )
+            }
+        }
+    }
+}
