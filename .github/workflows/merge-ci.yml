@@ -20,7 +20,7 @@ jobs:
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.14'
+          gradle-version: '9.1.0'
       - name: Test and enforce coverage
         run: gradle test koverVerify --stacktrace
       - name: Build Jar

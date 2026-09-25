@@ -19,7 +19,7 @@ jobs:
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.14'
+          gradle-version: '9.1.0'
       - name: Build Jar
         run: gradle build --stacktrace
       - name: Publish GitHub Release
