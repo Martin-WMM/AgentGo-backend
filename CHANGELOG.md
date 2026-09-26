@@ -6,6 +6,7 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Added
 
+- Added the `agentgo-app-modules` group with composable web, observability, persistence, and AI Spring Boot starters.
 - Added the `agentgo-app` Spring Boot web service module.
 - Added the `agentgo-cli` Spring Shell command-line module with the `agentgo version` command.
 - Added the `agentgo-commons` shared utility module.

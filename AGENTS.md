@@ -14,6 +14,12 @@ module-local version literals when a version is already defined there.
 
 - `agentgo-app`: Executable Spring Boot web service. It owns HTTP endpoints, Actuator,
   Springdoc OpenAPI, persistence integration, metrics, tracing, and application wiring.
+- `agentgo-app-modules`: Group of composable application capability starters consumed by
+  `agentgo-app`.
+- `agentgo-app-modules:agentgo-web-starter`: Web MVC and Springdoc OpenAPI capabilities.
+- `agentgo-app-modules:agentgo-observability-starter`: Actuator, metrics, and tracing capabilities.
+- `agentgo-app-modules:agentgo-persistence-starter`: JPA and PostgreSQL capabilities.
+- `agentgo-app-modules:agentgo-ai-starter`: Spring AI and AgentGo core workflow capabilities.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
 - `agentgo-commons`: Shared utility types and helpers. Keep transport DTOs out of this module.
@@ -23,8 +29,9 @@ module-local version literals when a version is already defined there.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
 
-Keep dependencies flowing toward shared modules. Avoid introducing application-specific
-dependencies into `agentgo-dto` or `agentgo-commons`.
+Keep dependencies flowing toward shared modules. `agentgo-app` should compose capabilities
+through `agentgo-app-modules` rather than declaring their infrastructure dependencies directly.
+Avoid introducing application-specific dependencies into `agentgo-dto` or `agentgo-commons`.
 
 ## Build and test
 

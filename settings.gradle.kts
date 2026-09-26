@@ -17,6 +17,10 @@ dependencyResolutionManagement {
 rootProject.name = "agentgo-backend"
 include(
     ":agentgo-app",
+    ":agentgo-app-modules:agentgo-web-starter",
+    ":agentgo-app-modules:agentgo-observability-starter",
+    ":agentgo-app-modules:agentgo-persistence-starter",
+    ":agentgo-app-modules:agentgo-ai-starter",
     ":agentgo-commons",
     ":agentgo-core",
     ":agentgo-dto",

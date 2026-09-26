@@ -7,18 +7,28 @@ The current project version is `0.1.0-SNAPSHOT`. Dependency and toolchain versio
 ## Modules
 
 - `agentgo-app`: Core Spring Boot web service.
+- `agentgo-app-modules`: Composable application capability starters used by `agentgo-app`.
 - `agentgo-commons`: Shared utility definitions and validation helpers.
 - `agentgo-core`: Core AI workflow components and LangGraph4j integration.
 - `agentgo-dto`: Cross-module data transfer objects and protocol models.
 - `agentgo-springboot-starter`: Shared Spring Boot auto-configuration, beans, and logging foundations.
 - `agentgo-cli`: Spring Shell command-line application for the `agentgo ...` command family.
 
+The `agentgo-app-modules` group currently contains:
+
+- `agentgo-web-starter`: Spring MVC and Springdoc OpenAPI.
+- `agentgo-observability-starter`: Actuator, Prometheus, and OpenTelemetry tracing.
+- `agentgo-persistence-starter`: Spring Data JPA and PostgreSQL runtime support.
+- `agentgo-ai-starter`: Spring AI and AgentGo core workflow integration.
+
 The intended dependency direction is:
 
 ```text
-agentgo-app  ─┬─> agentgo-core ─> agentgo-dto
-              ├─> agentgo-springboot-starter ─> agentgo-commons, agentgo-dto
-              └─> agentgo-dto
+agentgo-app  ─> agentgo-app-modules/*
+
+agentgo-app-modules/* ─> agentgo-springboot-starter
+agentgo-ai-starter     ─> agentgo-core ─> agentgo-dto
+agentgo-springboot-starter ─> agentgo-commons, agentgo-dto
 
 agentgo-cli  ─┬─> agentgo-core
               ├─> agentgo-springboot-starter
