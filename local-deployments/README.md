@@ -47,9 +47,9 @@ To remove the local PostgreSQL data volume as well:
 docker compose down -v
 ```
 
-The local stack overrides `SPRING_JPA_HIBERNATE_DDL_AUTO` with `update` because the
-application does not yet include database migration scripts. The default application
-configuration remains `validate`.
+Database changes are applied by Flyway from the repository's `db-migration` directory.
+The local stack uses `SPRING_JPA_HIBERNATE_DDL_AUTO=validate`, matching the default
+application configuration.
 
 The default `OPENAI_API_KEY` is a local placeholder that only allows Spring AI to initialize.
 Set a real key in `.env` before testing model calls.

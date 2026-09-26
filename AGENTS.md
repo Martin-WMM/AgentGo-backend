@@ -28,6 +28,7 @@ module-local version literals when a version is already defined there.
   modules belong here.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
+- `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
 
 Keep dependencies flowing toward shared modules. `agentgo-app` should compose capabilities
 through `agentgo-app-modules` rather than declaring their infrastructure dependencies directly.
@@ -55,9 +56,8 @@ The commons, core, DTO, and starter modules are internal library modules and mus
 published as standalone release artifacts.
 
 For local container testing, use `local-deployments/docker-compose.yml`. It starts PostgreSQL
-and the `agentgo-app` image. The local Compose environment may use `SPRING_JPA_HIBERNATE_DDL_AUTO=update`
-until database migration scripts are introduced; do not change the default application setting
-of `validate` for production-like environments.
+and the `agentgo-app` image. Database changes must be made through versioned Flyway migrations
+in `db-migration`; keep `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments.
 
 ## Coding conventions
 
