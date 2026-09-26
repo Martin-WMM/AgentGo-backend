@@ -15,4 +15,10 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "agentgo-backend"
-include(":agentgo-app")
+include(
+    ":agentgo-app",
+    ":agentgo-commons",
+    ":agentgo-core",
+    ":agentgo-springboot-starter",
+    ":agentgo-cli",
+)

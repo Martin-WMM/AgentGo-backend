@@ -2,6 +2,44 @@
 
 AgentGo Backend is a Kotlin, Gradle, Spring MVC, and Spring Boot 4 application.
 
+## Modules
+
+- `agentgo-app`: Core Spring Boot web service.
+- `agentgo-commons`: Shared DTOs and utility definitions.
+- `agentgo-core`: Core AI workflow components and LangGraph4j integration.
+- `agentgo-springboot-starter`: Shared Spring Boot auto-configuration, beans, and logging foundations.
+- `agentgo-cli`: Spring Shell command-line application for the `agentgo ...` command family.
+
+The baseline uses Spring Boot 4.1.1, Kotlin 2.3.x, Java 25 LTS, and Gradle 9.1+.
+
+## Web service
+
+The web service provides Actuator endpoints and OpenAPI documentation through Springdoc:
+
+```text
+GET /actuator/health
+GET /actuator/info
+GET /actuator/prometheus
+GET /v3/api-docs
+GET /swagger-ui.html
+```
+
+Health is provided by Actuator; the application does not define a custom health controller.
+
+## CLI
+
+Build the CLI Jar and start it with:
+
+```bash
+java -jar agentgo-cli/build/libs/agentgo-cli-0.1.0-SNAPSHOT.jar
+```
+
+Example command:
+
+```text
+agentgo version
+```
+
 ## Development workflow
 
 Code changes follow: `main → release/* → feature/* or fix/* → PR → release/* → PR → main`.
@@ -22,30 +60,6 @@ Windows PowerShell:
 
 ```powershell
 .\gradlew.bat build
-```
-
-## Application
-
-- `agentgo-app` is the only project module.
-- It provides the Spring MVC HTTP API.
-- The baseline uses Spring Boot 4.1.1, Kotlin 2.3.x, Java 25 LTS, and Gradle 9.1+.
-- Actuator exposes health, info, and Prometheus metrics endpoints.
-- Micrometer Tracing exports OTLP traces when an OpenTelemetry collector is available.
-- Spring Data JPA and PostgreSQL are configured through environment variables.
-- Spring AI Core and LangGraph4j are available for agent workflow integration.
-
-## Health endpoint
-
-```text
-GET /api/v1/health
-```
-
-## Infrastructure endpoints
-
-```text
-GET /actuator/health
-GET /actuator/info
-GET /actuator/prometheus
 ```
 
 ## Environment variables
