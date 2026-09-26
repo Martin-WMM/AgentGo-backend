@@ -3,8 +3,8 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.1"))
-    implementation(platform("org.springframework.shell:spring-shell-dependencies:4.0.3"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
+    implementation(platform("org.springframework.shell:spring-shell-dependencies:${rootProject.extra["springShellVersion"]}"))
     implementation(project(":agentgo-commons"))
     implementation(project(":agentgo-core"))
     implementation(project(":agentgo-springboot-starter"))
