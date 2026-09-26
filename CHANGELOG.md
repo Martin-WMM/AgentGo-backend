@@ -6,6 +6,8 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Added
 
+- Added a `local-deployments` Docker Compose stack for PostgreSQL and the executable web service.
+- Added Docker build and ignore files, an environment example, and local deployment verification instructions.
 - Added the `agentgo-app-modules` group with composable web, observability, persistence, and AI Spring Boot starters.
 - Added the `agentgo-app` Spring Boot web service module.
 - Added the `agentgo-cli` Spring Shell command-line module with the `agentgo version` command.

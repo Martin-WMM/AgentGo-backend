@@ -98,6 +98,26 @@ gradle build
 
 The build creates the two executable application Jars described above. CI runs the same build with the pinned Gradle version from the workflow.
 
+## Local deployment
+
+The [`local-deployments`](local-deployments) directory contains a Docker Compose stack for
+the web service and PostgreSQL:
+
+```bash
+cd local-deployments
+cp .env.example .env
+docker compose up --build -d
+```
+
+Verify the running service with:
+
+```bash
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/v3/api-docs
+```
+
+See [`local-deployments/README.md`](local-deployments/README.md) for logs, shutdown, and data-volume commands.
+
 ## Environment variables
 
 | Variable | Default | Purpose |

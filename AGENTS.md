@@ -54,6 +54,11 @@ The build publishes exactly two executable Spring Boot Jars:
 The commons, core, DTO, and starter modules are internal library modules and must not be
 published as standalone release artifacts.
 
+For local container testing, use `local-deployments/docker-compose.yml`. It starts PostgreSQL
+and the `agentgo-app` image. The local Compose environment may use `SPRING_JPA_HIBERNATE_DDL_AUTO=update`
+until database migration scripts are introduced; do not change the default application setting
+of `validate` for production-like environments.
+
 ## Coding conventions
 
 - Use Kotlin for new application and library code.
