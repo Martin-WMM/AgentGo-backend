@@ -5,6 +5,8 @@ This Compose stack provides the local Authentik identity center for AgentGo. It 
 - Authentik server and worker
 - PostgreSQL for Authentik state
 
+The pinned Authentik version is `2026.8.3`. Keep the server and worker on the same version.
+
 The deployment is intentionally isolated from the application database stack in
 `local-deployments/`.
 
