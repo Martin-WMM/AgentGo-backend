@@ -6,6 +6,8 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Added
 
+- Added an isolated local Authentik identity-center deployment with PostgreSQL, secret-safe
+  environment templates, and OIDC setup guidance.
 - Added a `local-deployments` Docker Compose stack for PostgreSQL and the executable web service.
 - Added Docker build and ignore files, an environment example, and local deployment verification instructions.
 - Added the `db-migration` Flyway migration directory and the initial schema metadata migration.

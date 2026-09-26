@@ -118,6 +118,11 @@ curl http://localhost:8080/v3/api-docs
 
 See [`local-deployments/README.md`](local-deployments/README.md) for logs, shutdown, and data-volume commands.
 
+The [`local-deployment`](local-deployment) directory contains the separate local Authentik
+identity-center stack. It uses its own PostgreSQL volume and exposes the Authentik setup flow
+at `http://localhost:9000/if/flow/initial-setup/`. Configure OAuth2/OpenID clients in Authentik
+before enabling backend authentication.
+
 ## Environment variables
 
 | Variable | Default | Purpose |
