@@ -9,6 +9,8 @@ All notable changes to AgentGo Backend are documented in this file.
 - Added an isolated local Authentik identity-center deployment with PostgreSQL, secret-safe
   environment templates, and OIDC setup guidance.
 - Branded the local Authentik default brand as AgentGo using the shared AgentGo Logo asset.
+- Fixed the Authentik AgentGo brand asset mount to use the public media directory so the logo
+  resolves in the admin interface.
 - Added a `local-deployments` Docker Compose stack for PostgreSQL and the executable web service.
 - Added Docker build and ignore files, an environment example, and local deployment verification instructions.
 - Added the `db-migration` Flyway migration directory and the initial schema metadata migration.

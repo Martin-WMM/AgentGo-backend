@@ -11,7 +11,7 @@ The deployment is intentionally isolated from the application database stack in
 `local-deployments/`.
 
 The default Authentik brand is configured as `AgentGo` and uses the Logo stored in
-`branding/agentgo-logo.png`. The file is mounted read-only into Authentik's media directory so
+`branding/agentgo-logo.png`. The file is mounted read-only into Authentik's public media directory so
 container recreation does not remove the brand asset.
 
 The default brand is also declared in `blueprints/agentgo-brand.yaml`, so a fresh local database

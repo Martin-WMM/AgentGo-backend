@@ -28,7 +28,7 @@ services:
     volumes:
       - authentik-media:/media
       - authentik-custom-templates:/templates
-      - ./branding:/media/branding:ro
+      - ./branding:/media/public/branding:ro
       - ./blueprints:/blueprints/custom:ro
     ports:
       - "${AUTHENTIK_HTTP_PORT:-9000}:9000"
@@ -52,7 +52,7 @@ services:
     volumes:
       - authentik-media:/media
       - authentik-custom-templates:/templates
-      - ./branding:/media/branding:ro
+      - ./branding:/media/public/branding:ro
       - ./blueprints:/blueprints/custom:ro
     depends_on:
       postgresql:
