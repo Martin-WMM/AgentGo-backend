@@ -2,6 +2,8 @@
 
 <!-- Explain what changed and why. Link the related issue, for example: Closes #123. -->
 
+Related issue: <!-- Closes #123 / N/A -->
+
 ## Change type
 
 - [ ] Bug fix
@@ -15,10 +17,17 @@
 
 <!-- Describe important design decisions, API changes, migrations, or trade-offs. -->
 
+### Release impact
+
+- Public API or protocol changes:
+- Database or configuration changes:
+- Release artifacts:
+
 ## Validation
 
 - [ ] I ran the relevant tests locally.
 - [ ] I verified the Gradle build and Jar output when applicable.
+- [ ] The build produces only the intended executable artifacts.
 - [ ] I added or updated tests for the changed behavior.
 - [ ] Code coverage remains at or above 85%.
 - [ ] I checked logs and error messages for secrets or personal data.
@@ -34,3 +43,7 @@
 ## Screenshots or logs
 
 <!-- Include only when useful. Remove secrets and personal data. -->
+
+## Follow-up work
+
+<!-- List any intentionally deferred work or write "None". -->
