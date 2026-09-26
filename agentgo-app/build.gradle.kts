@@ -7,6 +7,7 @@ dependencies {
     implementation(platform("org.springframework.ai:spring-ai-bom:${rootProject.extra["springAiVersion"]}"))
     implementation(project(":agentgo-commons"))
     implementation(project(":agentgo-core"))
+    implementation(project(":agentgo-dto"))
     implementation(project(":agentgo-springboot-starter"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")

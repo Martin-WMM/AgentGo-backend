@@ -14,9 +14,4 @@ class TextUtilsTest {
     fun rejectsBlankText() {
         assertFailsWith<IllegalArgumentException> { TextUtils.requireText(" ", "name") }
     }
-
-    @Test
-    fun wrapsResponseData() {
-        assertEquals("ok", ApiResponse("ok").data)
-    }
 }

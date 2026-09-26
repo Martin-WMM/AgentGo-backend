@@ -1,4 +1,4 @@
-package com.agentgo.commons
+package com.agentgo.dto
 
 data class ApiResponse<T>(
     val data: T,

@@ -5,8 +5,9 @@ AgentGo Backend is a Kotlin, Gradle, Spring MVC, and Spring Boot 4 application.
 ## Modules
 
 - `agentgo-app`: Core Spring Boot web service.
-- `agentgo-commons`: Shared DTOs and utility definitions.
+- `agentgo-commons`: Shared utility definitions.
 - `agentgo-core`: Core AI workflow components and LangGraph4j integration.
+- `agentgo-dto`: Cross-module data transfer objects and protocol models.
 - `agentgo-springboot-starter`: Shared Spring Boot auto-configuration, beans, and logging foundations.
 - `agentgo-cli`: Spring Shell command-line application for the `agentgo ...` command family.
 

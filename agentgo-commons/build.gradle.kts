@@ -1,1 +1,1 @@
-description = "Shared DTOs and utility types"
+description = "Shared utility types"

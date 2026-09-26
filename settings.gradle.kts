@@ -19,6 +19,7 @@ include(
     ":agentgo-app",
     ":agentgo-commons",
     ":agentgo-core",
+    ":agentgo-dto",
     ":agentgo-springboot-starter",
     ":agentgo-cli",
 )
