@@ -41,6 +41,15 @@ Example command:
 agentgo version
 ```
 
+## Distributable artifacts
+
+The build produces exactly two executable Spring Boot Jars:
+
+- `agentgo-app/build/libs/agentgo-app-*.jar`: runnable web service.
+- `agentgo-cli/build/libs/agentgo-cli-*.jar`: runnable `agentgo ...` shell CLI.
+
+The commons, core, DTO, and starter modules are library modules and are not published as standalone Jars.
+
 ## Development workflow
 
 Code changes follow: `main → release/* → feature/* or fix/* → PR → release/* → PR → main`.

@@ -27,5 +27,7 @@ jobs:
         run: gradle build --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: agentgo-jars
-          path: '**/build/libs/*.jar'
+          name: agentgo-executable-jars
+          path: |
+            agentgo-app/build/libs/agentgo-app-*.jar
+            agentgo-cli/build/libs/agentgo-cli-*.jar

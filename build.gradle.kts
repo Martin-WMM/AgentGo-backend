@@ -1,5 +1,6 @@
 import kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
@@ -37,6 +38,10 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+    }
+
+    tasks.named<Jar>("jar") {
+        enabled = false
     }
 
     dependencies {
