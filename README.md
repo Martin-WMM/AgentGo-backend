@@ -2,14 +2,28 @@
 
 AgentGo Backend is a Kotlin, Gradle, Spring MVC, and Spring Boot 4 application.
 
+The current project version is `0.1.0-SNAPSHOT`. Dependency and toolchain versions are centrally managed in the root [`build.gradle.kts`](build.gradle.kts).
+
 ## Modules
 
 - `agentgo-app`: Core Spring Boot web service.
-- `agentgo-commons`: Shared utility definitions.
+- `agentgo-commons`: Shared utility definitions and validation helpers.
 - `agentgo-core`: Core AI workflow components and LangGraph4j integration.
 - `agentgo-dto`: Cross-module data transfer objects and protocol models.
 - `agentgo-springboot-starter`: Shared Spring Boot auto-configuration, beans, and logging foundations.
 - `agentgo-cli`: Spring Shell command-line application for the `agentgo ...` command family.
+
+The intended dependency direction is:
+
+```text
+agentgo-app  ─┬─> agentgo-core ─> agentgo-dto
+              ├─> agentgo-springboot-starter ─> agentgo-commons, agentgo-dto
+              └─> agentgo-dto
+
+agentgo-cli  ─┬─> agentgo-core
+              ├─> agentgo-springboot-starter
+              └─> agentgo-dto
+```
 
 The baseline uses Spring Boot 4.1.1, Kotlin 2.3.x, Java 25 LTS, and Gradle 9.1+.
 
@@ -29,7 +43,7 @@ Health is provided by Actuator; the application does not define a custom health 
 
 ## CLI
 
-Build the CLI Jar and start it with:
+Build and start the CLI Jar with:
 
 ```bash
 java -jar agentgo-cli/build/libs/agentgo-cli-0.1.0-SNAPSHOT.jar
@@ -52,7 +66,7 @@ The commons, core, DTO, and starter modules are library modules and are not publ
 
 ## Development workflow
 
-Code changes follow: `main → release/* → feature/* or fix/* → PR → release/* → PR → main`.
+Code changes follow: `main -> release/* -> feature/* or fix/* -> PR -> release/* -> PR -> main`.
 
 - `main` and `release/*` accept changes only through pull requests.
 - Every commit must use `<emoji><type>: <message>` and change fewer than 300 lines.
@@ -60,17 +74,19 @@ Code changes follow: `main → release/* → feature/* or fix/* → PR → relea
 
 ## Local build
 
-Install JDK 25 and run:
+Install JDK 25 and Gradle 9.1 or newer, then run:
 
 ```bash
-./gradlew build
+gradle build
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\gradlew.bat build
+gradle build
 ```
+
+The build creates the two executable application Jars described above. CI runs the same build with the pinned Gradle version from the workflow.
 
 ## Environment variables
 
