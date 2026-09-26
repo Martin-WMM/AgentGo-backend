@@ -36,10 +36,15 @@ Avoid introducing application-specific dependencies into `agentgo-dto` or `agent
 
 ## Build and test
 
-The repository currently relies on the Gradle executable rather than a checked-in Gradle
-Wrapper. Use Gradle 9.1 or newer with JDK 25:
+The repository's CI uses Gradle 9.1 with JDK 25. The Gradle Wrapper may exist in a local
+workspace but is not part of the tracked project contract; use the wrapper when available,
+otherwise use Gradle 9.1 or newer:
 
 ```bash
+./gradlew test koverVerify
+./gradlew build
+
+# Or, when the local wrapper is unavailable:
 gradle test koverVerify
 gradle build
 ```
@@ -59,12 +64,39 @@ For local container testing, use `local-deployments/docker-compose.yml`. It star
 and the `agentgo-app` image. Database changes must be made through versioned Flyway migrations
 in `db-migration`; keep `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments.
 
+Start the local stack with:
+
+```bash
+cd local-deployments
+cp .env.example .env
+docker compose up --build -d
+```
+
+The local Compose file uses a placeholder `OPENAI_API_KEY` only to allow Spring AI to
+initialize. Replace it with a real key before testing model calls. Never commit `.env`.
+
+Verify the local stack with:
+
+```bash
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/swagger-ui.html
+```
+
+Use `docker compose logs -f agentgo-app` when diagnosing startup failures. Stop the stack
+with `docker compose down`; use `docker compose down -v` only when removing local database
+data is intentional.
+
 ## Coding conventions
 
 - Use Kotlin for new application and library code.
 - Use constructor injection for Spring dependencies.
 - Keep DTOs stable, serialization-friendly, and free of Spring or persistence concerns.
 - Use Actuator for health and operational endpoints; do not add a custom health controller.
+- Keep application capability dependencies in `agentgo-app-modules`; `agentgo-app` should
+  compose those starters rather than re-declaring their infrastructure dependencies.
+- Add database changes only as new Flyway migrations under
+  `db-migration/src/main/resources/db/migration/` using `V<version>__<description>.sql`.
+- Never edit a migration that has been applied to a shared environment; create a new version.
 - Document externally visible API changes in `README.md` and `CHANGELOG.md` when appropriate.
 - Never commit secrets, credentials, tokens, private keys, or production data.
 - Keep changes focused and preserve unrelated user work.
