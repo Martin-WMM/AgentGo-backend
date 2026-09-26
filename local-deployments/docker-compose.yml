@@ -28,6 +28,7 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-agentgo}
       DATABASE_USERNAME: ${POSTGRES_USER:-agentgo}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-agentgo-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-local-development-key}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       TRACING_SAMPLING_PROBABILITY: "0.0"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318/v1/traces

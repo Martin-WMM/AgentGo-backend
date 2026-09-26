@@ -50,3 +50,6 @@ docker compose down -v
 The local stack overrides `SPRING_JPA_HIBERNATE_DDL_AUTO` with `update` because the
 application does not yet include database migration scripts. The default application
 configuration remains `validate`.
+
+The default `OPENAI_API_KEY` is a local placeholder that only allows Spring AI to initialize.
+Set a real key in `.env` before testing model calls.
