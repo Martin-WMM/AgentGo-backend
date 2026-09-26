@@ -10,6 +10,10 @@ The pinned Authentik version is `2026.8.3`. Keep the server and worker on the sa
 The deployment is intentionally isolated from the application database stack in
 `local-deployments/`.
 
+The default Authentik brand is configured as `AgentGo` and uses the Logo stored in
+`branding/agentgo-logo.png`. The file is mounted read-only into Authentik's media directory so
+container recreation does not remove the brand asset.
+
 ## Start
 
 From `AgentGo-backend/local-deployment`:
