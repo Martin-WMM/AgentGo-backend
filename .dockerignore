@@ -1,0 +1,27 @@
+# Git and repository metadata
+.git/
+.github/
+.gitignore
+
+# IDE and local tooling
+.idea/
+.vscode/
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+
+# Build outputs and caches
+**/build/
+**/.kotlin/
+**/out/
+
+# Local deployment overrides and secrets
+local-deployments/.env
+local-deployments/*.override.yml
+
+# Documentation not required for the image build
+AGENTS.md
+CHANGELOG.md
+README.md
+SECURITY.md

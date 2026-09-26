@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agentgo}
+      POSTGRES_USER: ${POSTGRES_USER:-agentgo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentgo-local}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agentgo} -d ${POSTGRES_DB:-agentgo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  agentgo-app:
+    build:
+      context: ..
+      dockerfile: local-deployments/Dockerfile.app
+    image: agentgo-app:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-agentgo}
+      DATABASE_USERNAME: ${POSTGRES_USER:-agentgo}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-agentgo-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-local-development-key}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      TRACING_SAMPLING_PROBABILITY: "0.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318/v1/traces
+    ports:
+      - "${AGENTGO_APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

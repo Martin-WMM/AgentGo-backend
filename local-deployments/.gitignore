@@ -1,0 +1,9 @@
+# Local secrets and Compose overrides
+.env
+*.override.yml
+
+# Local Docker output and exported logs
+*.log
+*.tar
+data/
+logs/

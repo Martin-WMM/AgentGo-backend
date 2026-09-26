@@ -1,0 +1,34 @@
+name: Commit Review
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate commit format and size
+        shell: bash
+        run: |
+          set -euo pipefail
+          commits="$(git rev-list --no-merges "${{ github.event.before }}..${{ github.sha }}" 2>/dev/null || true)"
+          if [ -z "$commits" ]; then commits="$(git rev-list --no-merges -n 1 HEAD)"; fi
+          for commit in $commits; do
+            message="$(git log -1 --format=%s "$commit")"
+            if ! printf '%s\n' "$message" | grep -Pq '^[^\x00-\x7F]+(feat|fix|chore|docs|refactor|test|build|ci|perf|style|revert): .+'; then
+              echo "Invalid commit format: $message"
+              exit 1
+            fi
+            changed="$(git diff-tree --no-commit-id --numstat -r "$commit" | awk '{ add += $1; del += $2 } END { print add + del + 0 }')"
+            if [ "$changed" -ge 300 ]; then
+              echo "Commit $commit changes $changed lines; limit is below 300."
+              exit 1
+            fi
+          done

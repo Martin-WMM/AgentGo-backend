@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: agentgo-default-brand
+entries:
+  - model: authentik_brands.brand
+    identifiers:
+      domain: authentik-default
+    attrs:
+      branding_title: AgentGo
+      branding_logo: branding/agentgo-logo.png

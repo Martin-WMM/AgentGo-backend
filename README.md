@@ -1,30 +1,135 @@
 # AgentGo Backend
 
-AgentGo 的后端服务，采用 Kotlin 与 Gradle 多模块构建。
+AgentGo Backend is a Kotlin, Gradle, Spring MVC, and Spring Boot 4 application.
 
-## 开发流程
+The current project version is `0.1.0-SNAPSHOT`. Dependency and toolchain versions are centrally managed in the root [`build.gradle.kts`](build.gradle.kts).
 
-代码变更遵循：`main → release/* → feature/* 或 fix/* → PR → release/* → PR → main`。
+## Modules
 
-- `main` 和 `release/*` 仅接受 Pull Request 合并。
-- 每次提交必须符合 `<emoji><type>: <message>` 格式，且单次提交变更少于 300 行。
-- Pull Request 必须通过 Merge CI、测试和 85% 以上的代码覆盖率检查。
+- `agentgo-app`: Core Spring Boot web service.
+- `agentgo-app-modules`: Composable application capability starters used by `agentgo-app`.
+- `agentgo-commons`: Shared utility definitions and validation helpers.
+- `agentgo-core`: Core AI workflow components and LangGraph4j integration.
+- `agentgo-dto`: Cross-module data transfer objects and protocol models.
+- `agentgo-springboot-starter`: Shared Spring Boot auto-configuration, beans, and logging foundations.
+- `agentgo-cli`: Spring Shell command-line application for the `agentgo ...` command family.
 
-## 本地构建
+The `agentgo-app-modules` group currently contains:
 
-安装 JDK 21 后执行：
+- `agentgo-web-starter`: Spring MVC and Springdoc OpenAPI.
+- `agentgo-observability-starter`: Actuator, Prometheus, and OpenTelemetry tracing.
+- `agentgo-persistence-starter`: Spring Data JPA and PostgreSQL runtime support.
+- `agentgo-ai-starter`: Spring AI and AgentGo core workflow integration.
+
+The intended dependency direction is:
+
+```text
+agentgo-app  ─> agentgo-app-modules/*
+
+agentgo-app-modules/* ─> agentgo-springboot-starter
+agentgo-ai-starter     ─> agentgo-core ─> agentgo-dto
+agentgo-springboot-starter ─> agentgo-commons, agentgo-dto
+
+agentgo-cli  ─┬─> agentgo-core
+              ├─> agentgo-springboot-starter
+              └─> agentgo-dto
+```
+
+The baseline uses Spring Boot 4.1.1, Kotlin 2.3.x, Java 25 LTS, and Gradle 9.1+.
+
+## Web service
+
+The web service provides Actuator endpoints and OpenAPI documentation through Springdoc:
+
+```text
+GET /actuator/health
+GET /actuator/info
+GET /actuator/prometheus
+GET /v3/api-docs
+GET /swagger-ui.html
+```
+
+Health is provided by Actuator; the application does not define a custom health controller.
+
+## CLI
+
+Build and start the CLI Jar with:
 
 ```bash
-./gradlew build
+java -jar agentgo-cli/build/libs/agentgo-cli-0.1.0-SNAPSHOT.jar
 ```
 
-Windows PowerShell：
+Example command:
+
+```text
+agentgo version
+```
+
+## Distributable artifacts
+
+The build produces exactly two executable Spring Boot Jars:
+
+- `agentgo-app/build/libs/agentgo-app-*.jar`: runnable web service.
+- `agentgo-cli/build/libs/agentgo-cli-*.jar`: runnable `agentgo ...` shell CLI.
+
+The commons, core, DTO, and starter modules are library modules and are not published as standalone Jars.
+
+## Development workflow
+
+Code changes follow: `main -> release/* -> feature/* or fix/* -> PR -> release/* -> PR -> main`.
+
+- `main` and `release/*` accept changes only through pull requests.
+- Every commit must use `<emoji><type>: <message>` and change fewer than 300 lines.
+- Every pull request must pass Merge CI, tests, and the 85% code coverage gate.
+
+## Local build
+
+Install JDK 25 and Gradle 9.1 or newer, then run:
+
+```bash
+gradle build
+```
+
+Windows PowerShell:
 
 ```powershell
-.\gradlew.bat build
+gradle build
 ```
 
-## 模块
+The build creates the two executable application Jars described above. CI runs the same build with the pinned Gradle version from the workflow.
 
-- `agentgo-core`：领域模型与核心服务接口。
-- `agentgo-app`：应用启动模块。
+## Local deployment
+
+The [`local-deployments`](local-deployments) directory contains a Docker Compose stack for
+the web service and PostgreSQL:
+
+```bash
+cd local-deployments
+cp .env.example .env
+docker compose up --build -d
+```
+
+Verify the running service with:
+
+```bash
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/v3/api-docs
+```
+
+See [`local-deployments/README.md`](local-deployments/README.md) for logs, shutdown, and data-volume commands.
+
+The [`local-deployment`](local-deployment) directory contains the separate local Authentik
+identity-center stack. It uses its own PostgreSQL volume and exposes the Authentik setup flow
+at `http://localhost:9000/if/flow/initial-setup/`. Configure OAuth2/OpenID clients in Authentik
+before enabling backend authentication.
+
+## Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `jdbc:postgresql://localhost:5432/agentgo` | PostgreSQL JDBC URL |
+| `DATABASE_USERNAME` | `agentgo` | PostgreSQL username |
+| `DATABASE_PASSWORD` | `agentgo` | PostgreSQL password |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318/v1/traces` | OTLP trace endpoint |
+| `TRACING_SAMPLING_PROBABILITY` | `0.1` | Trace sampling probability |
+| `OPENAI_API_KEY` | unset | Spring AI OpenAI model access |
