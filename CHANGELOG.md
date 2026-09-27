@@ -6,6 +6,10 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Added
 
+- Added an authenticated user profile API and UI settings form that synchronize display name,
+  email, and avatar URL with Authentik through the server-side Core User API.
+- Added configurable SpringDoc OpenAPI metadata to `agentgo-springboot-starter`, including title,
+  description, version, contact, license, terms, and optional server information.
 - Added an isolated local Authentik identity-center deployment with PostgreSQL, secret-safe
   environment templates, and OIDC setup guidance.
 - Branded the local Authentik default brand as AgentGo using the shared AgentGo Logo asset.

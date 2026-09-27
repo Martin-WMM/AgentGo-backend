@@ -96,6 +96,69 @@ data is intentional.
 
 - Use Kotlin for new application and library code.
 - Use constructor injection for Spring dependencies.
+- Follow the official Kotlin coding conventions: use four-space indentation, `PascalCase`
+  for classes and interfaces, `camelCase` for functions, properties, and parameters, and
+  `UPPER_SNAKE_CASE` only for true compile-time constants. Prefer immutable `val` values,
+  expression bodies where they improve readability, null-safe Kotlin types instead of
+  platform-type workarounds, and standard-library collection operations over avoidable
+  mutable state. Keep functions small and single-purpose, avoid unnecessary `!!`, and use
+  sealed types or explicit result types when a finite state or failure model must be
+  represented.
+- Keep Kotlin imports explicit and organized by IDE/Kotlin formatter defaults. Do not use
+  wildcard imports. Add KDoc to public classes, interfaces, functions, and properties when
+  their behavior or contract is not self-evident; use `@param`, `@return`, and `@throws`
+  where they add useful contract information.
+- Keep exactly one top-level Kotlin declaration per source file. Each `class`, `data class`,
+  `sealed class`, `enum class`, `interface`, `object`, and `typealias` must have its own file
+  named after the declaration, including test declarations where practical.
+- Keep Spring components focused and use constructor injection. Prefer data classes for
+  immutable value objects and request/response models, and do not expose mutable collections
+  from public APIs unless mutation is part of the contract.
+- Every module below `agentgo-app-modules` must be named `agentgo-app-<module-name>` using
+  lowercase kebab-case. The Gradle project path, module directory, and published artifact
+  name must follow the same convention.
+- Organize HTTP capabilities with an explicit Controller, Service, and Repository structure:
+  - Each `XxxController` must have a matching `XxxControllerApiDoc` interface under the
+    sibling `controller.apidoc` package. The API-doc
+    type is an interface implemented by the controller and contains the Springdoc/Swagger
+    contract, including tags, endpoint summaries/descriptions, parameters, request and
+    response schemas, and relevant HTTP responses. Keep endpoint mappings and business logic
+    out of the API-doc interface.
+  - Each service must be declared as an `XxxService` interface and implemented by exactly
+    one `XxxServiceImpl` class unless a deliberate alternative is documented. Put the
+    service contract and usage expectations in KDoc on the interface; keep orchestration and
+    business rules in the implementation rather than in controllers or repositories.
+  - Repositories must be responsible for persistence access only. Controllers must delegate
+    to services and must not access repositories directly.
+- Keep Spring configuration classes in a module's `config` package and configuration-properties
+  classes in its sibling `properties` package. Do not place `XxxProperties` beside `XxxConfig`.
+- `agentgo-dto` is organized into focused DTO modules. Define request, response, and protocol
+  data models there when they cross module boundaries. Every externally visible DTO field and
+  model must have a useful Swagger/OpenAPI description (for example with `@Schema`), including
+  requiredness, format, examples, and allowed values where applicable. DTOs must remain free
+  of Spring service logic and persistence annotations.
+- PostgreSQL is the database of record. For each persisted model, define the JPA `Entity`
+  first, then define its repository interface. A repository must extend all of
+  `JpaRepository<Entity, Id>`, `JpaSpecificationExecutor<Entity>`, and
+  `QueryByExampleExecutor<Entity>` as appropriate for the entity. Keep entity mappings,
+  identifiers, nullability, indexes, and column constraints aligned with the corresponding
+  Flyway migration; use `ddl-auto=validate` and never rely on Hibernate to create or update
+  production schema.
+- Every JPA entity must contain `creator`, `createdAt`, `updatedAt`, and `updatedBy` audit
+  fields. Use Spring Data JPA auditing (`@CreatedBy`, `@CreatedDate`, `@LastModifiedDate`,
+  and `@LastModifiedBy`) with a configured `AuditorAware`; do not manage these timestamps
+  manually in entity lifecycle callbacks.
+- `agentgo-commons` provides shared data formats, value objects, exceptions, and general
+  utilities. Keep these types framework-agnostic where possible; do not place application
+  controllers, Spring configuration, persistence entities, or transport-specific DTOs there.
+  Maintain the shared code-to-exception registry in Commons when adding a new externally
+  visible error code; error codes must be stable and must not be silently reused.
+- `agentgo-springboot-starter` provides shared Spring Boot infrastructure and foundational
+  auto-configuration. It must expose common beans such as the project `ObjectMapper`, define
+  `LogAspect` to log controller/service input and output parameters with appropriate
+  redaction and without leaking secrets, and provide the Springdoc OpenAPI integration used
+  by the application. Keep starter configuration reusable and avoid application-specific
+  business logic in this module.
 - Keep DTOs stable, serialization-friendly, and free of Spring or persistence concerns.
 - Use Actuator for health and operational endpoints; do not add a custom health controller.
 - Keep application capability dependencies in `agentgo-app-modules`; `agentgo-app` should
