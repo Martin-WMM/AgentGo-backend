@@ -1,4 +1,58 @@
 services:
+  agentgo-postgresql:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${AGENTGO_POSTGRES_DB:-agentgo}
+      POSTGRES_USER: ${AGENTGO_POSTGRES_USER:-agentgo}
+      POSTGRES_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:-agentgo-local}
+    volumes:
+      - agentgo-postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AGENTGO_POSTGRES_USER:-agentgo} -d ${AGENTGO_POSTGRES_DB:-agentgo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  agentgo-app:
+    build:
+      context: ..
+      dockerfile: local-deployments/Dockerfile.app
+    image: agentgo-app:local
+    env_file:
+      - ../local-deployments/.env
+    environment:
+      DATABASE_URL: jdbc:postgresql://agentgo-postgresql:5432/${AGENTGO_POSTGRES_DB:-agentgo}
+      DATABASE_USERNAME: ${AGENTGO_POSTGRES_USER:-agentgo}
+      DATABASE_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:-agentgo-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-local-development-key}
+      AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://localhost:9000/application/o/authorize/}
+      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://authentik-server:9000/application/o/token/}
+      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://authentik-server:9000/application/o/agentgo/jwks/}
+      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://authentik-server:9000/application/o/userinfo/}
+      AGENTGO_OIDC_CLIENT_ID: ${AGENTGO_OIDC_CLIENT_ID:-agentgo}
+      AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:-http://localhost:5173}
+      AGENTGO_AUTHENTIK_API_BASE_URL: ${AGENTGO_AUTHENTIK_API_BASE_URL:-http://authentik-server:9000}
+      AGENTGO_AUTHENTIK_API_TOKEN: ${AGENTGO_AUTHENTIK_API_TOKEN:-}
+      AGENTGO_AUTHENTIK_BROWSER_BASE_URL: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:-http://localhost:9000}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-local-minio-password-change-me}
+      MINIO_BUCKET: ${MINIO_BUCKET:-agentgo-bucket}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      TRACING_SAMPLING_PROBABILITY: "0.0"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318/v1/traces
+    depends_on:
+      agentgo-postgresql:
+        condition: service_healthy
+      authentik-server:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "${AGENTGO_APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
   postgresql:
     image: postgres:17-alpine
     environment:
@@ -25,6 +79,14 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?Set PG_PASS in .env}
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?Set AUTHENTIK_SECRET_KEY in .env}
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST:-}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS:-true}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: "${AUTHENTIK_EMAIL__FROM:-AgentGo <agentgo@example.com>}"
     volumes:
       - authentik-media:/media
       - authentik-custom-templates:/templates
@@ -49,6 +111,14 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?Set PG_PASS in .env}
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?Set AUTHENTIK_SECRET_KEY in .env}
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST:-}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS:-true}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: "${AUTHENTIK_EMAIL__FROM:-AgentGo <agentgo@example.com>}"
     volumes:
       - authentik-media:/media
       - authentik-custom-templates:/templates
@@ -59,7 +129,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  minio:
+    image: ${MINIO_IMAGE:-alpine/minio}:${MINIO_VERSION:-latest-release}
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "${MINIO_API_PORT:-9001}:9000"
+      - "${MINIO_CONSOLE_PORT:-9002}:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
 volumes:
+  agentgo-postgresql-data:
   authentik-postgresql-data:
   authentik-media:
   authentik-custom-templates:
+  minio-data:

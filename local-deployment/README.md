@@ -4,6 +4,7 @@ This Compose stack provides the local Authentik identity center for AgentGo. It 
 
 - Authentik server and worker
 - PostgreSQL for Authentik state
+- MinIO object storage for local file assets
 
 The pinned Authentik version is `2026.8.3`. Keep the server and worker on the same version.
 
@@ -42,6 +43,18 @@ Open the initial setup flow at:
 The trailing slash is required by Authentik's initial setup flow. Create the local
 `akadmin` account in the browser; credentials are not stored in this repository.
 
+## MinIO object storage
+
+MinIO is available for local file and object-storage development:
+
+- S3 API: <http://localhost:9001>
+- MinIO Console: <http://localhost:9002>
+- Persistent data volume: `minio-data`
+
+Use `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from the local `.env` file to sign in. The
+default values in `.env.example` are for local development only and must be changed before
+sharing the deployment or using it outside a local machine.
+
 ## Configure AgentGo as an OIDC client
 
 After the initial setup, create an OAuth2/OpenID Provider and an Application in Authentik:
@@ -76,6 +89,7 @@ the local identity database and should only be used for a deliberate reset.
 ## Security notes
 
 - Never commit `.env`, Authentik data, client secrets, SMTP credentials, or production keys.
+- Never commit MinIO credentials or object-storage data.
 - Generate a unique `AUTHENTIK_SECRET_KEY` and PostgreSQL password outside local-only testing.
 - The Docker socket is not mounted because this deployment does not manage Authentik outposts.
 - The original ContextX deployment contains credentials and data directories; they were not
