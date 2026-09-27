@@ -1,107 +1,25 @@
-# AgentGo Backend
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Martin-WMM/AgentGo-UI/main/app/public/assets/logo-dark.png" alt="AgentGo" width="180">
+</p>
 
-AgentGo Backend is a Kotlin, Gradle, Spring MVC, and Spring Boot 4 application.
+<h1 align="center">AgentGo Backend</h1>
 
-The current project version is `0.1.0-SNAPSHOT`. Dependency and toolchain versions are centrally managed in the root [`build.gradle.kts`](build.gradle.kts).
+<p align="center">
+  <a href="https://github.com/Martin-WMM/AgentGo-backend/actions/workflows/merge-ci.yml"><img src="https://github.com/Martin-WMM/AgentGo-backend/actions/workflows/merge-ci.yml/badge.svg?branch=main" alt="Merge CI"></a>
+  <a href="https://github.com/Martin-WMM/AgentGo-backend"><img src="https://img.shields.io/github/stars/Martin-WMM/AgentGo-backend" alt="GitHub stars"></a>
+</p>
 
-## Modules
+Kotlin、Spring Boot 4 和 Spring MVC 构建的 AgentGo 服务端，负责 API、认证、Agent 工作流、持久化和文件存储。
 
-- `agentgo-app`: Core Spring Boot web service.
-- `agentgo-app-modules`: Composable application capability starters used by `agentgo-app`.
-- `agentgo-commons`: Shared utility definitions and validation helpers.
-- `agentgo-core`: Core AI workflow components and LangGraph4j integration.
-- `agentgo-dto`: Cross-module data transfer objects and protocol models.
-- `agentgo-springboot-starter`: Shared Spring Boot auto-configuration, beans, and logging foundations.
-- `agentgo-cli`: Spring Shell command-line application for the `agentgo ...` command family.
+## 快速开始
 
-The `agentgo-app-modules` group currently contains:
-
-- `agentgo-web-starter`: Spring MVC and Springdoc OpenAPI.
-- `agentgo-observability-starter`: Actuator, Prometheus, and OpenTelemetry tracing.
-- `agentgo-persistence-starter`: Spring Data JPA and PostgreSQL runtime support.
-- `agentgo-ai-starter`: Spring AI and AgentGo core workflow integration.
-
-The intended dependency direction is:
-
-```text
-agentgo-app  ─> agentgo-app-modules/*
-
-agentgo-app-modules/* ─> agentgo-springboot-starter
-agentgo-ai-starter     ─> agentgo-core ─> agentgo-dto
-agentgo-springboot-starter ─> agentgo-commons, agentgo-dto
-
-agentgo-cli  ─┬─> agentgo-core
-              ├─> agentgo-springboot-starter
-              └─> agentgo-dto
-```
-
-The baseline uses Spring Boot 4.1.1, Kotlin 2.3.x, Java 25 LTS, and Gradle 9.1+.
-
-## Web service
-
-The web service provides Actuator endpoints and OpenAPI documentation through Springdoc:
-
-```text
-GET /actuator/health
-GET /actuator/info
-GET /actuator/prometheus
-GET /v3/api-docs
-GET /swagger-ui.html
-```
-
-Health is provided by Actuator; the application does not define a custom health controller.
-
-## CLI
-
-Build and start the CLI Jar with:
+要求：JDK 25、Gradle 9.1+、Docker。
 
 ```bash
-java -jar agentgo-cli/build/libs/agentgo-cli-0.1.0-SNAPSHOT.jar
+gradle test koverVerify build
 ```
 
-Example command:
-
-```text
-agentgo version
-```
-
-## Distributable artifacts
-
-The build produces exactly two executable Spring Boot Jars:
-
-- `agentgo-app/build/libs/agentgo-app-*.jar`: runnable web service.
-- `agentgo-cli/build/libs/agentgo-cli-*.jar`: runnable `agentgo ...` shell CLI.
-
-The commons, core, DTO, and starter modules are library modules and are not published as standalone Jars.
-
-## Development workflow
-
-Code changes follow: `main -> release/* -> feature/* or fix/* -> PR -> release/* -> PR -> main`.
-
-- `main` and `release/*` accept changes only through pull requests.
-- Every commit must use `<emoji><type>: <message>` and change fewer than 300 lines.
-- Every pull request must pass Merge CI, tests, and the 85% code coverage gate.
-
-## Local build
-
-Install JDK 25 and Gradle 9.1 or newer, then run:
-
-```bash
-gradle build
-```
-
-Windows PowerShell:
-
-```powershell
-gradle build
-```
-
-The build creates the two executable application Jars described above. CI runs the same build with the pinned Gradle version from the workflow.
-
-## Local deployment
-
-The [`local-deployments`](local-deployments) directory contains a Docker Compose stack for
-the web service and PostgreSQL:
+启动本地服务：
 
 ```bash
 cd local-deployments
@@ -109,48 +27,20 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-Verify the running service with:
+服务地址：`http://localhost:8080`；健康检查：`/actuator/health`；OpenAPI：`/swagger-ui.html`。
 
-```bash
-curl http://localhost:8080/actuator/health
-curl http://localhost:8080/v3/api-docs
-```
+## 主要模块
 
-See [`local-deployments/README.md`](local-deployments/README.md) for logs, shutdown, and data-volume commands.
+`agentgo-app` 是可运行服务，`agentgo-cli` 是命令行客户端；其余模块提供通用模型、工作流、Spring Boot 基础设施、认证和文件能力。
 
-The [`local-deployment`](local-deployment) directory contains the separate local Authentik
-identity-center stack. It uses its own PostgreSQL volume and exposes the Authentik setup flow
-at `http://localhost:9000/if/flow/initial-setup/`. The [`terraform`](terraform) directory
-provisions the AgentGo application, OIDC provider, login flow, email registration flow, and
-password-recovery flow. Apply it after Authentik is available, then copy the generated client
-secret into `local-deployments/.env`.
+## 文档
 
-The backend exposes `/api/auth/session`, `/api/auth/login`, `/api/auth/logout`, and the authenticated
-profile endpoints `/api/auth/profile` (`GET` and `PUT`). Profile updates are written to Authentik
-through its Core User API. Configure `AGENTGO_AUTHENTIK_API_TOKEN` with a server-side Authentik API
-token that can manage users; never expose this token to the UI or commit it. Logout clears the
-AgentGo session and redirects the browser to Authentik's RP-initiated logout endpoint. That ends
-the Authentik session and returns to the UI, which starts a new sign-in. After the user signs in,
-Authentik sends them back to the UI.
+完整的架构、认证、部署、Terraform、API 和二次开发说明请查看 [AgentGo Docs](https://github.com/Martin-WMM/AgentGo-docs)。
 
-## Environment variables
+- [快速上手](https://github.com/Martin-WMM/AgentGo-docs/tree/main/app/src/resources/%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B)
+- [集成与扩展](https://github.com/Martin-WMM/AgentGo-docs/tree/main/app/src/resources/%E9%9B%86%E6%88%90%E4%B8%8E%E6%89%A9%E5%B1%95)
+- [二次开发](https://github.com/Martin-WMM/AgentGo-docs/tree/main/app/src/resources/%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91)
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | `jdbc:postgresql://localhost:5432/agentgo` | PostgreSQL JDBC URL |
-| `DATABASE_USERNAME` | `agentgo` | PostgreSQL username |
-| `DATABASE_PASSWORD` | `agentgo` | PostgreSQL password |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318/v1/traces` | OTLP trace endpoint |
-| `TRACING_SAMPLING_PROBABILITY` | `0.1` | Trace sampling probability |
-| `OPENAI_API_KEY` | unset | Spring AI OpenAI model access |
-| `AGENTGO_OIDC_ISSUER_URI` | `http://localhost:9000/application/o/agentgo/` | Authentik OIDC issuer; use `host.docker.internal` when the backend runs in Docker |
-| `AGENTGO_OIDC_CLIENT_ID` | `agentgo` | Authentik confidential client ID |
-| `AGENTGO_OIDC_CLIENT_SECRET` | unset | Secret generated by the Terraform Authentik provider |
-| `AGENTGO_UI_BASE_URL` | `http://localhost:5173` | UI URL used after login and logout |
-| `AGENTGO_AUTHENTIK_API_BASE_URL` | `http://localhost:9000` | Authentik Core API base URL |
-| `AGENTGO_AUTHENTIK_API_TOKEN` | unset | Server-side token used to synchronize user profiles |
-| `AGENTGO_AUTHENTIK_BROWSER_BASE_URL` | `http://localhost:9000` | Authentik base URL reachable by the browser for OIDC logout redirects |
-| `AGENTGO_OPENAPI_TITLE` | `AgentGo API` | OpenAPI document title |
-| `AGENTGO_OPENAPI_DESCRIPTION` | `AgentGo backend service API` | OpenAPI document description |
-| `AGENTGO_OPENAPI_VERSION` | `v1` | API document version |
-| `AGENTGO_OPENAPI_SERVER_URL` | unset | Optional server URL shown by Swagger UI |
+## 参与贡献
+
+请先阅读 [AGENTS.md](AGENTS.md) 和 [AgentGo Docs 贡献指南](https://github.com/Martin-WMM/AgentGo-docs/blob/main/CONTRIBUTING.md)。
