@@ -1,50 +1,67 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Martin-WMM/AgentGo-UI/main/app/public/assets/logo-dark.png" alt="AgentGo" width="180">
+  <img src="agentgo-app/src/main/resources/agentgo-logo.png" alt="AgentGo Logo" width="180">
 </p>
 
 <h1 align="center">AgentGo Backend</h1>
 
 <p align="center">
   <a href="https://github.com/Martin-WMM/AgentGo-backend/actions/workflows/merge-ci.yml"><img src="https://github.com/Martin-WMM/AgentGo-backend/actions/workflows/merge-ci.yml/badge.svg?branch=main" alt="Merge CI"></a>
-  <a href="https://github.com/Martin-WMM/AgentGo-backend"><img src="https://img.shields.io/github/stars/Martin-WMM/AgentGo-backend" alt="GitHub stars"></a>
+  <a href="https://img.shields.io/github/stars/Martin-WMM/AgentGo-backend"><img src="https://img.shields.io/github/stars/Martin-WMM/AgentGo-backend" alt="GitHub stars"></a>
 </p>
 
-Kotlin、Spring Boot 4 和 Spring MVC 构建的 AgentGo 服务端，负责 API、认证、Agent 工作流、持久化和文件存储。
+## 1. Introduction / 简介
 
-## 快速开始
+AgentGo Backend is the Kotlin, Spring Boot, and Spring MVC service that provides
+authentication, agent workflows, persistence, file storage, and integration APIs.
 
-要求：JDK 25、Gradle 9.1+、Docker。
+AgentGo Backend 是基于 Kotlin、Spring Boot 和 Spring MVC 的服务端，提供认证、Agent 工作流、持久化、文件存储及集成 API。
+
+## 2. Updates / 更新
+
+- Modular Gradle architecture with reusable application starters.
+- Authentik integration, profile/session APIs, and file capabilities.
+- Coverage and build quality gates are enforced by CI.
+
+- 采用模块化 Gradle 架构和可复用应用 Starter。
+- 已接入 Authentik，并提供用户资料、会话和文件能力。
+- CI 强制执行测试、覆盖率和构建质量检查。
+
+## 3. Getting Started / 快速开始
+
+Requirements / 环境要求: JDK 25, Gradle 9.1+, and Docker。
 
 ```bash
 gradle test koverVerify build
-```
 
-启动本地服务：
-
-```bash
 cd local-deployments
 cp .env.example .env
 docker compose up --build -d
 ```
 
-服务地址：`http://localhost:8080`；健康检查：`/actuator/health`；OpenAPI：`/swagger-ui.html`。
+The service is available at `http://localhost:8080`; health and OpenAPI endpoints
+are `/actuator/health` and `/swagger-ui.html`.
 
-## 主要模块
+服务地址为 `http://localhost:8080`，健康检查和 OpenAPI 地址分别为
+`/actuator/health` 和 `/swagger-ui.html`。
 
-`agentgo-app` 是可运行服务，`agentgo-cli` 是命令行客户端；其余模块提供通用模型、工作流、Spring Boot 基础设施、认证和文件能力。
+## 4. Contribution / 参与贡献
 
-## 文档
+Read [AGENTS.md](AGENTS.md), follow the protected branch flow, and keep API changes
+documented in [AgentGo Docs](https://github.com/Martin-WMM/AgentGo-docs)。
 
-完整的架构、认证、部署、Terraform、API 和二次开发说明请查看 [AgentGo Docs](https://github.com/Martin-WMM/AgentGo-docs)。
+请先阅读 [AGENTS.md](AGENTS.md)，遵守受保护分支流程，并在
+[AgentGo Docs](https://github.com/Martin-WMM/AgentGo-docs) 中同步 API 变更。
 
-- [快速上手](https://github.com/Martin-WMM/AgentGo-docs/tree/main/app/src/resources/%E5%BF%AB%E9%80%9F%E4%B8%8A%E6%89%8B)
-- [集成与扩展](https://github.com/Martin-WMM/AgentGo-docs/tree/main/app/src/resources/%E9%9B%86%E6%88%90%E4%B8%8E%E6%89%A9%E5%B1%95)
-- [二次开发](https://github.com/Martin-WMM/AgentGo-docs/tree/main/app/src/resources/%E4%BA%8C%E6%AC%A1%E5%BC%80%E5%8F%91)
+## 5. License / 许可证
 
-## 参与贡献
+This project is governed by the [AgentGo Proprietary License](LICENSE)。All rights
+belong to Martin M. W. (王美民). Any use, modification, distribution, or commercial
+use requires prior written confirmation at `blessedwmm@gmail.com`。
 
-请先阅读 [AGENTS.md](AGENTS.md) 和 [AgentGo Docs 贡献指南](https://github.com/Martin-WMM/AgentGo-docs/blob/main/CONTRIBUTING.md)。
+本项目采用 [AgentGo Proprietary License](LICENSE)。所有权利归 Martin M. W.（王美民）所有。
+任何使用、修改、分发或商业用途，均须先通过 `blessedwmm@gmail.com` 获得本人书面确认授权。
 
-## 许可证
+## Related Projects / 相关项目
 
-本项目采用 [AgentGo Proprietary License](LICENSE)。版权所有归 Martin M. W.（王美民）所有。任何使用、修改、分发或商业用途，均须先通过 `blessedwmm@gmail.com` 获得本人书面确认授权。
+- [AgentGo UI](https://github.com/Martin-WMM/AgentGo-UI) · [AgentGo Desktop](https://github.com/Martin-WMM/AgentGo-desktop)
+- [AgentGo Docs](https://github.com/Martin-WMM/AgentGo-docs)
