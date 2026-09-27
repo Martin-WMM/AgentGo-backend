@@ -7,6 +7,10 @@
 <p align="center">
   <a href="https://github.com/Martin-WMM/AgentGo-backend/actions/workflows/merge-ci.yml"><img src="https://github.com/Martin-WMM/AgentGo-backend/actions/workflows/merge-ci.yml/badge.svg?branch=main" alt="Merge CI"></a>
   <a href="https://img.shields.io/github/stars/Martin-WMM/AgentGo-backend"><img src="https://img.shields.io/github/stars/Martin-WMM/AgentGo-backend" alt="GitHub stars"></a>
+  <img src="https://img.shields.io/badge/Kotlin-2.3.0-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 2.3.0">
+  <img src="https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 4.1.1">
+  <img src="https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk&logoColor=white" alt="Java 25">
+  <img src="https://img.shields.io/badge/Gradle-9.1%2B-02303A?logo=gradle&logoColor=white" alt="Gradle 9.1+">
 </p>
 
 ## 1. Introduction / 简介
