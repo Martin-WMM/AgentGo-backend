@@ -44,3 +44,7 @@ docker compose up --build -d
 ## 参与贡献
 
 请先阅读 [AGENTS.md](AGENTS.md) 和 [AgentGo Docs 贡献指南](https://github.com/Martin-WMM/AgentGo-docs/blob/main/CONTRIBUTING.md)。
+
+## 许可证
+
+本项目采用 [AgentGo Proprietary License](LICENSE)。版权所有归 Martin M. W.（王美民）所有。任何使用、修改、分发或商业用途，均须先通过 `blessedwmm@gmail.com` 获得本人书面确认授权。
