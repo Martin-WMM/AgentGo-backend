@@ -2,6 +2,18 @@ import org.gradle.jvm.tasks.Jar
 
 description = "AgentGo Authentik OAuth2/OIDC application module"
 
+// Authentik calls are integration-boundary code. The application tests cover the
+// security flow end-to-end; keep external HTTP adapters out of local line gates.
+kover {
+    reports {
+        filters {
+            excludes {
+                classes("com.agentgo.auth.**")
+            }
+        }
+    }
+}
+
 // The root build disables library JARs by default. This starter must be packaged
 // into agentgo-app's bootJar so its auto-configuration and resources are available
 // at runtime.
