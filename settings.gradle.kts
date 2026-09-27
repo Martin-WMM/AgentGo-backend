@@ -21,6 +21,8 @@ include(
     ":agentgo-app-modules:agentgo-observability-starter",
     ":agentgo-app-modules:agentgo-persistence-starter",
     ":agentgo-app-modules:agentgo-ai-starter",
+    ":agentgo-app-modules:agentgo-app-auth",
+    ":agentgo-app-modules:agentgo-app-file",
     ":agentgo-commons",
     ":agentgo-core",
     ":agentgo-dto",

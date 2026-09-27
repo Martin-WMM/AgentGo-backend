@@ -1,4 +1,4 @@
-package com.agentgo.starter
+package com.agentgo.starter.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
