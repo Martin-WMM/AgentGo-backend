@@ -1,0 +1,8 @@
+# Local secrets and Compose state
+.env
+*.override.yml
+
+# Local Authentik data and exported logs
+data/
+logs/
+*.log

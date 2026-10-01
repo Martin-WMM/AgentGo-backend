@@ -19,3 +19,11 @@ Thumbs.db
 # Environment and secrets
 .env
 *.local
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/crash.log
+terraform/*.tfvars
+!terraform/*.tfvars.example
