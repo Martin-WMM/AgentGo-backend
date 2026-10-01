@@ -1,0 +1,171 @@
+name: Deployment TEST
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: agentgo-backend-test-deployment
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/martin-wmm/agentgo-backend
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  validate-ref:
+    name: Validate release branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" == release/* ]] || { echo 'Deployment TEST requires release/*.' >&2; exit 1; }
+
+  deploy:
+    name: Build and deploy backend to TEST
+    needs: validate-ref
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - name: Check out selected revision
+        uses: actions/checkout@v4
+
+      - name: Check whether the image exists in GHCR
+        id: image-check
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          if docker manifest inspect "$IMAGE_NAME:$IMAGE_TAG" >/dev/null 2>&1; then echo 'exists=true' >> "$GITHUB_OUTPUT"; else echo 'exists=false' >> "$GITHUB_OUTPUT"; fi
+
+      - name: Build and publish Docker image
+        id: publish
+        if: steps.image-check.outputs.exists != 'true'
+        run: |
+          set -euo pipefail
+          docker build -f local-deployments/Dockerfile.app --tag "$IMAGE_NAME:$IMAGE_TAG" .
+          docker push "$IMAGE_NAME:$IMAGE_TAG"
+
+      - name: Prepare deployment SSH credentials
+        id: ssh
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          key_file="$RUNNER_TEMP/agentgo-backend-deploy-key"
+          known_hosts_file="$RUNNER_TEMP/agentgo-backend-known-hosts"
+          install -m 600 /dev/null "$key_file"
+          install -m 600 /dev/null "$known_hosts_file"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key_file"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$known_hosts_file"
+          echo "key_file=$key_file" >> "$GITHUB_OUTPUT"
+          echo "known_hosts_file=$known_hosts_file" >> "$GITHUB_OUTPUT"
+
+      - name: Sync TEST deployment files
+        id: upload
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          KEY_FILE: ${{ steps.ssh.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
+          mkdir -p "$DEPLOY_PATH/agentgo-backend-deployment"
+          compose_file="$DEPLOY_PATH/docker-compose.yml"
+          if [[ ! -s "$compose_file" ]]; then printf '%s\n' 'include:' > "$compose_file"; fi
+          grep -Fqx '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml' "$compose_file" || \
+            printf '%s\n' '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml' >> "$compose_file"
+          REMOTE
+          rsync -az --delete -e "ssh -i $KEY_FILE -p $DEPLOY_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE" \
+            agentgo-backend-deployment/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/agentgo-backend-deployment/"
+
+      - name: Check whether the image exists on TEST server
+        id: server-image-check
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          KEY_FILE: ${{ steps.ssh.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
+          if ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker image inspect '$IMAGE_NAME:$IMAGE_TAG' >/dev/null 2>&1"; then echo 'exists=true' >> "$GITHUB_OUTPUT"; else echo 'exists=false' >> "$GITHUB_OUTPUT"; fi
+
+      - name: Pull image and start TEST service
+        id: deploy
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_UI_BASE_URL: http://${{ secrets.DEPLOY_HOST }}:20081
+          DEPLOY_POSTGRES_PASSWORD: ${{ secrets.AGENTGO_POSTGRES_PASSWORD }}
+          KEY_FILE: ${{ steps.ssh.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SERVER_IMAGE_EXISTS: ${{ steps.server-image-check.outputs.exists }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
+          if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin"; fi
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_UI_BASE_URL='$DEPLOY_UI_BASE_URL' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD)=' .env > .env.next || true; else : > .env.next; fi
+          printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$DEPLOY_UI_BASE_URL" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
+          mv .env.next .env
+          chmod 600 .env
+          [[ "$SERVER_IMAGE_EXISTS" == true ]] || docker compose pull agentgo-app
+          docker compose up -d agentgo-app
+          REMOTE
+
+      - name: Verify TEST deployment
+        id: verify
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          KEY_FILE: ${{ steps.ssh.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker inspect -f '{{.State.Running}}' agentgo-app | grep -qx true && curl --fail --silent http://127.0.0.1:20082/actuator/health >/dev/null"
+
+      - name: Write deployment summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## AgentGo Backend Deployment'
+            echo
+            echo '- Environment: TEST'
+            echo "- Source commit: $GITHUB_SHA"
+            echo "- Image: $IMAGE_NAME:$IMAGE_TAG"
+            echo "- GHCR image check: ${{ steps.image-check.outcome }}"
+            echo "- Publish image: ${{ steps.publish.outcome }}"
+            echo "- Sync deployment files: ${{ steps.upload.outcome }}"
+            echo "- TEST server image check: ${{ steps.server-image-check.outcome }}"
+            echo "- Start service: ${{ steps.deploy.outcome }}"
+            echo "- Health check: ${{ steps.verify.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          [[ "${{ steps.image-check.outcome }}" == success && ( "${{ steps.publish.outcome }}" == success || "${{ steps.publish.outcome }}" == skipped ) && "${{ steps.upload.outcome }}" == success && "${{ steps.server-image-check.outcome }}" == success && "${{ steps.deploy.outcome }}" == success && "${{ steps.verify.outcome }}" == success ]]
