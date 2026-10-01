@@ -1,0 +1,65 @@
+name: Branch governance
+
+on:
+  pull_request_target:
+    branches: [main, 'release/**']
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  branch-flow:
+    name: Validate branch governance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark branch policy pending on the PR head
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              ...context.repo, sha: context.payload.pull_request.head.sha,
+              context: 'Branch flow policy', state: 'pending',
+              description: 'Validating AgentGo branch flow',
+            });
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+      - name: Test branch policy
+        run: node --test .github/scripts/branch-policy.test.cjs
+      - name: Validate integration route and linked issues
+        if: github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { validateBranchFlow, validateAncestry } = require(process.env.GITHUB_WORKSPACE + '/.github/scripts/branch-policy.cjs');
+            const pr = context.payload.pull_request;
+            const policy = validateBranchFlow(pr);
+            for (const issue_number of policy.issueNumbers) {
+              const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number });
+              if (issue.pull_request) throw new Error('#' + issue_number + ' must be an Issue, not a PR.');
+            }
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              ...context.repo,
+              basehead: pr.base.sha + '...' + pr.head.sha,
+            });
+            validateAncestry(comparison.status);
+            core.info('Branch flow, ancestry, issue links and AgentGo Project declaration are valid. Verify Project membership during planning and review.');
+      - name: Publish required policy status on the PR head
+        if: always() && github.event_name == 'pull_request_target'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              ...context.repo, sha: context.payload.pull_request.head.sha,
+              context: 'Branch flow policy',
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              description: 'AgentGo branch flow validation',
+              target_url: context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId,
+            });
