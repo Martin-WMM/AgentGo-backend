@@ -90,6 +90,8 @@ jobs:
           if [[ ! -s "$compose_file" ]]; then printf '%s\n' 'include:' > "$compose_file"; fi
           grep -Fqx '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml' "$compose_file" || \
             printf '%s\n' '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml' >> "$compose_file"
+          grep -Fqx '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-authentik.yml' "$compose_file" || \
+            printf '%s\n' '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-authentik.yml' >> "$compose_file"
           REMOTE
           rsync -az --delete -e "ssh -i $KEY_FILE -p $DEPLOY_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE" \
             agentgo-backend-deployment/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/agentgo-backend-deployment/"
@@ -118,6 +120,8 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DEPLOY_UI_BASE_URL: http://${{ secrets.DEPLOY_HOST }}:20081
           DEPLOY_POSTGRES_PASSWORD: ${{ secrets.AGENTGO_POSTGRES_PASSWORD }}
+          AUTHENTIK_SECRET_KEY: ${{ secrets.AUTHENTIK_SECRET_KEY }}
+          AUTHENTIK_POSTGRES_PASSWORD: ${{ secrets.AUTHENTIK_POSTGRES_PASSWORD }}
           KEY_FILE: ${{ steps.ssh.outputs.key_file }}
           KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -126,15 +130,17 @@ jobs:
           set -euo pipefail
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
           if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin"; fi
-          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_UI_BASE_URL='$DEPLOY_UI_BASE_URL' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_UI_BASE_URL='$DEPLOY_UI_BASE_URL' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' AUTHENTIK_SECRET_KEY='$AUTHENTIK_SECRET_KEY' AUTHENTIK_POSTGRES_PASSWORD='$AUTHENTIK_POSTGRES_PASSWORD' DEPLOY_HOST='$DEPLOY_HOST' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$DEPLOY_PATH"
-          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD)=' .env > .env.next || true; else : > .env.next; fi
+          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AUTHENTIK_SECRET_KEY|AUTHENTIK_POSTGRES_PASSWORD|AGENTGO_OIDC_.*|AGENTGO_AUTHENTIK_BROWSER_BASE_URL)=' .env > .env.next || true; else : > .env.next; fi
           printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$DEPLOY_UI_BASE_URL" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
+          printf 'AUTHENTIK_SECRET_KEY=%s\nAUTHENTIK_POSTGRES_PASSWORD=%s\n' "$AUTHENTIK_SECRET_KEY" "$AUTHENTIK_POSTGRES_PASSWORD" >> .env.next
+          printf 'AGENTGO_OIDC_AUTHORIZATION_URI=http://%s:20083/application/o/authorize/\nAGENTGO_OIDC_TOKEN_URI=http://%s:20083/application/o/token/\nAGENTGO_OIDC_JWK_SET_URI=http://%s:20083/application/o/agentgo/jwks/\nAGENTGO_OIDC_USER_INFO_URI=http://%s:20083/application/o/userinfo/\nAGENTGO_AUTHENTIK_BROWSER_BASE_URL=http://%s:20083\n' "$DEPLOY_HOST" "$DEPLOY_HOST" "$DEPLOY_HOST" "$DEPLOY_HOST" "$DEPLOY_HOST" >> .env.next
           mv .env.next .env
           chmod 600 .env
           [[ "$SERVER_IMAGE_EXISTS" == true ]] || docker compose pull agentgo-app
-          docker compose up -d agentgo-app
+          docker compose up -d agentgo-authentik-server agentgo-authentik-worker agentgo-app
           REMOTE
 
       - name: Verify TEST deployment
