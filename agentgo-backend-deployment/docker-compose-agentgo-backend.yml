@@ -1,0 +1,48 @@
+services:
+  agentgo-backend-postgresql:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${AGENTGO_POSTGRES_DB:-agentgo}
+      POSTGRES_USER: ${AGENTGO_POSTGRES_USER:-agentgo}
+      POSTGRES_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:?AGENTGO_POSTGRES_PASSWORD is required}
+    volumes:
+      - agentgo-backend-postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${AGENTGO_POSTGRES_USER:-agentgo} -d $${AGENTGO_POSTGRES_DB:-agentgo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  agentgo-app:
+    image: ghcr.io/martin-wmm/agentgo-backend:${AGENTGO_BACKEND_IMAGE_TAG:?AGENTGO_BACKEND_IMAGE_TAG is required}
+    container_name: agentgo-app
+    environment:
+      DATABASE_URL: jdbc:postgresql://agentgo-backend-postgresql:5432/${AGENTGO_POSTGRES_DB:-agentgo}
+      DATABASE_USERNAME: ${AGENTGO_POSTGRES_USER:-agentgo}
+      DATABASE_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:?AGENTGO_POSTGRES_PASSWORD is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-test-placeholder}
+      AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://host.docker.internal:9000/application/o/authorize/}
+      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://host.docker.internal:9000/application/o/token/}
+      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://host.docker.internal:9000/application/o/agentgo/jwks/}
+      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://host.docker.internal:9000/application/o/userinfo/}
+      AGENTGO_OIDC_CLIENT_ID: ${AGENTGO_OIDC_CLIENT_ID:-agentgo}
+      AGENTGO_OIDC_CLIENT_SECRET: ${AGENTGO_OIDC_CLIENT_SECRET:-}
+      AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:?AGENTGO_UI_BASE_URL is required}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://host.docker.internal:9001}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-local-minio-password-change-me}
+      MINIO_BUCKET: ${MINIO_BUCKET:-agentgo-bucket}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      TRACING_SAMPLING_PROBABILITY: "0.0"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      agentgo-backend-postgresql:
+        condition: service_healthy
+    ports:
+      - '20082:8080'
+    restart: unless-stopped
+
+volumes:
+  agentgo-backend-postgresql-data:
