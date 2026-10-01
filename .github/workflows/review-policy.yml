@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   review-policy:
-    name: review-policy
+    name: Review Policy / review-policy
     runs-on: ubuntu-latest
     steps:
       - name: Enforce author review policy

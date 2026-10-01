@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   review:
+    name: Commit Review / review
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

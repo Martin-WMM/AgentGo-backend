@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   test-and-quality:
+    name: Merge CI / test-and-quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
