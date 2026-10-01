@@ -1,0 +1,22 @@
+# Copy to terraform.tfvars locally, or pass variables through CI secrets.
+# terraform.tfvars is ignored by Git.
+authentik_url = "http://localhost:9000"
+
+# Do not put the API token in this file. Prefer:
+#   $env:AUTHENTIK_TOKEN = "..."
+# If the token is only available in another shell, copy this file to
+# terraform.auto.tfvars and set the value there; *.tfvars is ignored by Git.
+authentik_token = "replace-me"
+
+redirect_uris = [
+  {
+    url               = "http://localhost:8080/login/oauth2/code/authentik"
+    matching_mode     = "strict"
+    redirect_uri_type = "authorization"
+  },
+  {
+    url               = "http://localhost:5173"
+    matching_mode     = "strict"
+    redirect_uri_type = "logout"
+  }
+]
