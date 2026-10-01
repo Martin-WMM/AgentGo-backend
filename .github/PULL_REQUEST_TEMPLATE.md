@@ -47,3 +47,9 @@ Related issue: <!-- Closes #123 / N/A -->
 ## Follow-up work
 
 <!-- List any intentionally deferred work or write "None". -->
+## Branch planning
+
+Project: https://github.com/users/Martin-WMM/projects/2
+Source branch: <main-or-release/name>
+
+<!-- Add this PR and its Issue to AgentGo Project #2, populate Branch / Source branch / Target branch, and verify membership before review. Feature/fix PRs target their source release; release/hotfix PRs target main. Release branches are retained permanently. -->
