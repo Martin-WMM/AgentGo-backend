@@ -69,7 +69,7 @@ class AvatarServiceImpl(
             properties.bucketName,
             avatarPrefix(ownerId),
         ).firstOrNull()
-            ?: throw FileException(HttpStatus.NOT_FOUND, "Avatar was not found")
+            ?: throw FileException(2005, "FILE-005", HttpStatus.NOT_FOUND, "Avatar was not found")
         return fileService.getObject(
             entity.objectKey,
             entity.contentType,
@@ -80,14 +80,14 @@ class AvatarServiceImpl(
     private fun currentOwnerId(): String {
         val authentication = SecurityContextHolder.getContext().authentication
         if (authentication == null || !authentication.isAuthenticated || authentication is AnonymousAuthenticationToken) {
-            throw FileException(HttpStatus.UNAUTHORIZED, "Authentication is required")
+            throw FileException(1002, "AUTH-002", HttpStatus.UNAUTHORIZED, "Authentication is required")
         }
         return authentication.name
     }
 
     private fun validateFile(file: MultipartFile) {
-        if (file.isEmpty) throw FileException(HttpStatus.BAD_REQUEST, "File must not be empty")
-        if (file.size > properties.maxFileSizeBytes) throw FileException(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the configured size limit")
+        if (file.isEmpty) throw FileException(2002, "FILE-002", HttpStatus.BAD_REQUEST, "File must not be empty")
+        if (file.size > properties.maxFileSizeBytes) throw FileException(2002, "FILE-002", HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the configured size limit")
     }
 
     private fun safeFilename(filename: String?, fallback: String): String =

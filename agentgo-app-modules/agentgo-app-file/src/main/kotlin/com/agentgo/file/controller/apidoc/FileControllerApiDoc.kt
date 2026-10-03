@@ -1,6 +1,6 @@
 package com.agentgo.file.controller.apidoc
 
-import com.agentgo.commons.http.HttpResponse
+import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.dto.file.FileMetadataResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -34,7 +34,7 @@ interface FileControllerApiDoc {
         @Parameter(description = "Relative path inside the current user's workspace", example = "reports/summary.md", `in` = ParameterIn.QUERY)
         @RequestParam("path") path: String,
         @RequestPart("file") file: MultipartFile,
-    ): HttpResponse<FileMetadataResponse>
+    ): CommonHttpResponse<FileMetadataResponse>
 
     @Operation(summary = "Download a workspace file")
     @GetMapping("/workspace")
@@ -42,7 +42,7 @@ interface FileControllerApiDoc {
 
     @Operation(summary = "List current user's workspace files")
     @GetMapping("/workspace/files")
-    fun listWorkspace(): HttpResponse<List<FileMetadataResponse>>
+    fun listWorkspace(): CommonHttpResponse<List<FileMetadataResponse>>
 
     @Operation(summary = "Delete a workspace file")
     @ApiResponse(responseCode = "204", description = "Workspace file deleted")
