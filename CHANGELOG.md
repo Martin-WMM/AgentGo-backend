@@ -29,9 +29,13 @@ All notable changes to AgentGo Backend are documented in this file.
 - Added GitHub Actions for commit review, dependency review, Merge CI, CodeQL, and tagged releases.
 - Added repository issue and pull request templates, security policy documentation, and branch protection rules.
 
+### Removed
+
+- Removed the unused Spring AI OpenAI starter from the application classpath. Model calls are not wired yet.
+
 ### Changed
 
-- Centralized project, Java, Kotlin, Spring Boot, Spring AI, Springdoc, LangGraph4j, Spring Shell, and Kover versions in the root `build.gradle.kts`.
+- Centralized project, Java, Kotlin, Spring Boot, Springdoc, LangGraph4j, Spring Shell, and Kover versions in the root `build.gradle.kts`.
 - Standardized the toolchain on Java 25 LTS, Kotlin 2.3.x, and Gradle 9.1+.
 - Configured the build to publish exactly two executable Spring Boot Jars: the web application and the CLI.
 - Kept commons, core, DTO, and starter modules as internal library modules rather than standalone release artifacts.
