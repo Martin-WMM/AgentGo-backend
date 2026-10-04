@@ -18,7 +18,7 @@ class ResponseCodeRegistryTest {
     fun exposesSpecificSuccessCodeDescriptions() {
         assertEquals(
             "FILE",
-            FileResponseCodeRegistry.codeDescriptions[FileResponseCodeRegistry.UPLOAD_COMPLETED]?.category,
+            FileResponseCodeRegistry.codeDescriptions[FileResponseCodeRegistry.UPLOAD_COMPLETED_TYPE]?.category,
         )
     }
 
