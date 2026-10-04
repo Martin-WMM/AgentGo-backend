@@ -23,6 +23,11 @@ test('accepts AgentGo cycle release names', () => {
   assert.equal(validateBranchFlow(pr('feature/7-governance', branch)).sourceBranch, branch);
 });
 
+test('accepts release branches with the AgentGo cycle naming convention', () => {
+  const branch = 'release/26-TM6-1';
+  assert.equal(validateBranchFlow(pr('feature/7-governance', branch)).sourceBranch, branch);
+});
+
 test('accepts release and hotfix promotion to main', () => {
   for (const branch of ['release/governance', 'hotfix/7-security']) {
     assert.equal(validateBranchFlow(pr(branch, 'main')).sourceBranch, 'main');
