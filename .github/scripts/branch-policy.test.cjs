@@ -18,6 +18,11 @@ test('accepts feature and fix integration into their declared release', () => {
   }
 });
 
+test('accepts AgentGo cycle release names', () => {
+  const branch = 'release/26-TW6-1';
+  assert.equal(validateBranchFlow(pr('feature/7-governance', branch)).sourceBranch, branch);
+});
+
 test('accepts release branches with the AgentGo cycle naming convention', () => {
   const branch = 'release/26-TM6-1';
   assert.equal(validateBranchFlow(pr('feature/7-governance', branch)).sourceBranch, branch);
