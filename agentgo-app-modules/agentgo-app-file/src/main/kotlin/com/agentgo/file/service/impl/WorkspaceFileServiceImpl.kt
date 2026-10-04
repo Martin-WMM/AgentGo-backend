@@ -87,21 +87,21 @@ class WorkspaceFileServiceImpl(
     private fun currentOwnerId(): String {
         val authentication = SecurityContextHolder.getContext().authentication
         if (authentication == null || !authentication.isAuthenticated || authentication is AnonymousAuthenticationToken) {
-            throw FileException(HttpStatus.UNAUTHORIZED, "Authentication is required")
+            throw FileException(1002, "AUTH-002", HttpStatus.UNAUTHORIZED, "Authentication is required")
         }
         return authentication.name
     }
 
     private fun findFile(objectKey: String): FileEntity =
         fileRepository.findByBucketNameAndObjectKey(properties.bucketName, objectKey)
-            ?: throw FileException(HttpStatus.NOT_FOUND, "File was not found")
+            ?: throw FileException(2005, "FILE-005", HttpStatus.NOT_FOUND, "File was not found")
 
     private fun filenameOf(entity: FileEntity): String =
         entity.metadata["original-filename"] ?: entity.objectKey.substringAfterLast('/')
 
     private fun validateFile(file: MultipartFile) {
-        if (file.isEmpty) throw FileException(HttpStatus.BAD_REQUEST, "File must not be empty")
-        if (file.size > properties.maxFileSizeBytes) throw FileException(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the configured size limit")
+        if (file.isEmpty) throw FileException(2002, "FILE-002", HttpStatus.BAD_REQUEST, "File must not be empty")
+        if (file.size > properties.maxFileSizeBytes) throw FileException(2002, "FILE-002", HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the configured size limit")
     }
 
     private fun contentTypeOf(file: MultipartFile): String = file.contentType?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
@@ -112,7 +112,7 @@ class WorkspaceFileServiceImpl(
     private fun normalizeWorkspacePath(path: String): String {
         val normalized = path.replace('\\', '/').trim('/')
         val parts = normalized.split('/')
-        if (normalized.isBlank() || parts.any { it.isBlank() || it == "." || it == ".." }) throw FileException(HttpStatus.BAD_REQUEST, "Workspace path is invalid")
+        if (normalized.isBlank() || parts.any { it.isBlank() || it == "." || it == ".." }) throw FileException(2001, "FILE-001", HttpStatus.BAD_REQUEST, "Workspace path is invalid")
         return parts.joinToString("/")
     }
 

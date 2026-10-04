@@ -15,7 +15,7 @@ plugins {
 extra["projectVersion"] = "0.1.0-SNAPSHOT"
 extra["javaVersion"] = 25
 extra["springBootVersion"] = "4.1.1"
-extra["springAiVersion"] = "2.0.1"
+extra["jackson2Version"] = "2.22.1"
 extra["springdocVersion"] = "3.1.1"
 extra["langgraph4jVersion"] = "1.9.1"
 extra["springShellVersion"] = "4.0.3"

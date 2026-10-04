@@ -20,9 +20,9 @@ spring:
             user-info-uri: ${AGENTGO_OIDC_USER_INFO_URI:http://host.docker.internal:9000/application/o/userinfo/}
             user-name-attribute: preferred_username
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/agentgo}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/agentgo}
     username: ${DATABASE_USERNAME:agentgo}
-    password: ${DATABASE_PASSWORD:agentgo}
+    password: ${DATABASE_PASSWORD:agentgo-local}
   jpa:
     open-in-view: false
     hibernate:

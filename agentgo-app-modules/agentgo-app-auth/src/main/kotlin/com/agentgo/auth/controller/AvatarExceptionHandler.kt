@@ -1,6 +1,7 @@
 package com.agentgo.auth.controller
 
-import com.agentgo.commons.http.HttpErrorResponse
+import com.agentgo.commons.dto.http.response.CommonHttpResponse
+import com.agentgo.commons.dto.http.response.status.error.ErrorResponseCodeRegistry
 import com.agentgo.file.exception.FileException
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -9,18 +10,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 @RestControllerAdvice(basePackageClasses = [AvatarController::class])
 class AvatarExceptionHandler {
     @ExceptionHandler(FileException::class)
-    fun handleFileException(exception: FileException): ResponseEntity<HttpErrorResponse> =
+    fun handleFileException(exception: FileException): ResponseEntity<CommonHttpResponse<Nothing>> =
         ResponseEntity.status(exception.status).body(
-            HttpErrorResponse(
-                code = exception.status.value(),
+            CommonHttpResponse(
+                code = exception.code,
                 message = exception.message,
                 retryable = exception.status.is5xxServerError,
+                success = false,
+                responseType = exception.responseType,
+                error = ErrorResponseCodeRegistry.description(exception.responseType),
             ),
         )
 
     @ExceptionHandler(IllegalStateException::class)
-    fun handleStorageException(): ResponseEntity<HttpErrorResponse> =
+    fun handleStorageException(): ResponseEntity<CommonHttpResponse<Nothing>> =
         ResponseEntity.internalServerError().body(
-            HttpErrorResponse(code = 500, message = "File storage is currently unavailable", retryable = true),
+            CommonHttpResponse(
+                code = 7001,
+                message = "File storage is currently unavailable",
+                retryable = true,
+                success = false,
+                responseType = "SYSTEM-001",
+                error = ErrorResponseCodeRegistry.description("SYSTEM-001"),
+            ),
         )
 }

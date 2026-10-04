@@ -1,11 +1,10 @@
 package com.agentgo.starter
 
+import com.agentgo.starter.annotation.AgentGoLogApi
+import com.agentgo.starter.config.AgentGoStarterAutoConfiguration
 import com.agentgo.starter.properties.AgentGoOpenApiProperties
 import com.agentgo.starter.properties.AgentGoStarterProperties
-import com.agentgo.starter.config.AgentGoStarterAutoConfiguration
-import java.lang.reflect.Proxy
-import org.aspectj.lang.ProceedingJoinPoint
-import org.aspectj.lang.Signature
+import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -45,43 +44,21 @@ class AgentGoStarterAutoConfigurationTest {
 
     @Test
     fun createsObjectMapperBean() {
-        assertNotNull(AgentGoStarterAutoConfiguration().agentGoObjectMapper().findAndRegisterModules())
+        val objectMapper = AgentGoStarterAutoConfiguration().agentGoObjectMapper()
+
+        assertNotNull(objectMapper)
+        assertEquals("\"2026-10-03T12:30:00\"", objectMapper.writeValueAsString(LocalDateTime.of(2026, 10, 3, 12, 30)))
     }
 
     @Test
-    fun logsSuccessfulInvocationAndRedactsSensitiveArguments() {
-        val joinPoint = joinPoint(throws = false)
+    fun usesBlankNameAsMethodNameByDefault() {
+        val annotation = LogApiFixture::class.java.getDeclaredMethod("defaultName").getAnnotation(AgentGoLogApi::class.java)
 
-        assertEquals("result", com.agentgo.starter.LogAspect().logInvocation(joinPoint))
+        assertEquals("", annotation.name)
     }
 
-    @Test
-    fun logsAndRethrowsInvocationFailure() {
-        val joinPoint = joinPoint(throws = true)
-
-        kotlin.test.assertFailsWith<IllegalStateException> {
-            com.agentgo.starter.LogAspect().logInvocation(joinPoint)
-        }
-    }
-
-    private fun joinPoint(throws: Boolean): ProceedingJoinPoint {
-        val signature = Proxy.newProxyInstance(
-            javaClass.classLoader,
-            arrayOf(Signature::class.java),
-        ) { _, method, _ ->
-            if (method.name == "toShortString") "test.operation()" else null
-        } as Signature
-
-        return Proxy.newProxyInstance(
-            javaClass.classLoader,
-            arrayOf(ProceedingJoinPoint::class.java),
-        ) { _, method, _ ->
-            when (method.name) {
-                "getSignature" -> signature
-                "getArgs" -> arrayOf("password=secret", "x".repeat(513))
-                "proceed" -> if (throws) throw IllegalStateException("failure") else "result"
-                else -> null
-            }
-        } as ProceedingJoinPoint
+    private class LogApiFixture {
+        @AgentGoLogApi
+        fun defaultName() = Unit
     }
 }

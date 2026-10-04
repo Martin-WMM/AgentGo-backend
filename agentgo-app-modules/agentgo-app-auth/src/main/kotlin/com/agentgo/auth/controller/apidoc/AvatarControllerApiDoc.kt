@@ -1,6 +1,6 @@
 package com.agentgo.auth.controller.apidoc
 
-import com.agentgo.commons.http.HttpResponse
+import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.dto.file.FileMetadataResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -26,7 +26,7 @@ interface AvatarControllerApiDoc {
         ],
     )
     @PutMapping("/avatar", consumes = ["multipart/form-data"])
-    fun uploadAvatar(@RequestPart("file") file: MultipartFile): HttpResponse<FileMetadataResponse>
+    fun uploadAvatar(@RequestPart("file") file: MultipartFile): CommonHttpResponse<FileMetadataResponse>
 
     @Operation(summary = "Download current user's avatar")
     @ApiResponse(responseCode = "200", description = "Avatar content")

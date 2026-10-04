@@ -19,13 +19,13 @@ module-local version literals when a version is already defined there.
 - `agentgo-app-modules:agentgo-web-starter`: Web MVC and Springdoc OpenAPI capabilities.
 - `agentgo-app-modules:agentgo-observability-starter`: Actuator, metrics, and tracing capabilities.
 - `agentgo-app-modules:agentgo-persistence-starter`: JPA and PostgreSQL capabilities.
-- `agentgo-app-modules:agentgo-ai-starter`: Spring AI and AgentGo core workflow capabilities.
+- `agentgo-app-modules:agentgo-ai-starter`: AgentGo core workflow capabilities. Spring AI is not wired in yet.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
-- `agentgo-commons`: Shared utility types and helpers. Keep transport DTOs out of this module.
+- `agentgo-commons`: Shared utility types, helpers, and the standardized HTTP, pagination, and SSE response DTOs.
 - `agentgo-core`: AI workflow and orchestration components, including LangGraph4j integration.
-- `agentgo-dto`: Cross-module data transfer objects and protocol models. DTOs shared between
-  modules belong here.
+- `agentgo-dto`: Cross-module business data transfer objects and protocol models. DTOs shared
+  between modules belong here, except for the standardized HTTP, pagination, and SSE response DTOs.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
 - `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
@@ -78,8 +78,7 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-The local Compose file uses a placeholder `OPENAI_API_KEY` only to allow Spring AI to
-initialize. Replace it with a real key before testing model calls. Never commit `.env`.
+Never commit `.env`.
 
 Verify the local stack with:
 
@@ -132,11 +131,11 @@ data is intentional.
     to services and must not access repositories directly.
 - Keep Spring configuration classes in a module's `config` package and configuration-properties
   classes in its sibling `properties` package. Do not place `XxxProperties` beside `XxxConfig`.
-- `agentgo-dto` is organized into focused DTO modules. Define request, response, and protocol
-  data models there when they cross module boundaries. Every externally visible DTO field and
-  model must have a useful Swagger/OpenAPI description (for example with `@Schema`), including
-  requiredness, format, examples, and allowed values where applicable. DTOs must remain free
-  of Spring service logic and persistence annotations.
+- `agentgo-dto` is organized into focused DTO modules. Define request, business response, and
+  protocol data models there when they cross module boundaries. Every externally visible DTO
+  field and model must have a useful Swagger/OpenAPI description (for example with `@Schema`),
+  including requiredness, format, examples, and allowed values where applicable. DTOs must remain
+  free of Spring service logic and persistence annotations.
 - PostgreSQL is the database of record. For each persisted model, define the JPA `Entity`
   first, then define its repository interface. A repository must extend all of
   `JpaRepository<Entity, Id>`, `JpaSpecificationExecutor<Entity>`, and
@@ -148,10 +147,10 @@ data is intentional.
   fields. Use Spring Data JPA auditing (`@CreatedBy`, `@CreatedDate`, `@LastModifiedDate`,
   and `@LastModifiedBy`) with a configured `AuditorAware`; do not manage these timestamps
   manually in entity lifecycle callbacks.
-- `agentgo-commons` provides shared data formats, value objects, exceptions, and general
-  utilities. Keep these types framework-agnostic where possible; do not place application
-  controllers, Spring configuration, persistence entities, or transport-specific DTOs there.
-  Maintain the shared code-to-exception registry in Commons when adding a new externally
+- `agentgo-commons` provides shared data formats, value objects, exceptions, general utilities,
+  and the standard transport response contracts. Keep these types framework-agnostic where
+  possible; do not place application controllers, Spring configuration, or persistence entities
+  there. Maintain the shared code-to-exception registry in Commons when adding a new externally
   visible error code; error codes must be stable and must not be silently reused.
 - `agentgo-springboot-starter` provides shared Spring Boot infrastructure and foundational
   auto-configuration. It must expose common beans such as the project `ObjectMapper`, define
@@ -160,6 +159,37 @@ data is intentional.
   by the application. Keep starter configuration reusable and avoid application-specific
   business logic in this module.
 - Keep DTOs stable, serialization-friendly, and free of Spring or persistence concerns.
+- All HTTP responses must use `com.agentgo.commons.dto.http.response.CommonHttpResponse<T>`,
+  all SSE events must use `com.agentgo.commons.dto.http.response.CommonEventResponse<E>`, and
+  all paginated responses must use `com.agentgo.commons.dto.http.response.PageResponse<T>`.
+  Paginated query inputs must use `com.agentgo.commons.dto.http.request.PageRequest`, with
+  `page` starting at one and `SortOrder` limited to `ASC` or `DESC`. Do not introduce
+  alternative HTTP response envelopes, SSE event payloads, pagination request/response DTOs,
+  or sorting-direction enums.
+- In `CommonHttpResponse`, `code` is a stable integer system or business code (for example,
+  `2001`), never an HTTP status code. `responseType` is its corresponding stable string code
+  (for example, `FILE-001`). Set HTTP status through the HTTP response status line; use `error`
+  for the corresponding
+  `ErrorResponseCodeRegistry` description when `success` is `false`.
+- Register every code in the appropriate `dto.http.response.status.success` or
+  `dto.http.response.status.error` `XxxResponseCodeRegistry` before using it in a response.
+  Use `BaseResponseCodeRegistry.SUCCESS` only when no distinct successful business state needs
+  to be exposed.
+- Keep response-code metadata under `com.agentgo.commons.dto.http.response.status`. Place
+  successful outcomes in its `success` package and failures in its `error` package. Split code
+  definitions by business domain into `XxxResponseCodeRegistry` types (for example,
+  `FileResponseCodeRegistry` and `AuthResponseCodeRegistry`); do not add unrelated codes to a
+  base or aggregate registry. `ErrorResponseCodeRegistry` may aggregate error registries only
+  for lookup and must not define domain-specific codes itself. Each registered code must define
+  its meaning, category, and safe example message through `ResponseCodeDescription`.
+- Maintain the canonical integer `code` to string `responseType` correspondence in
+  `ResponseCodeRegistry.responseTypesByCode`. Every entry must resolve to a registered domain
+  response type and must never be reused for a different outcome.
+- For a dedicated module exception class with one fixed error status, register its
+  `ExceptionClass → (code, responseType)` mapping with
+  `ExceptionResponseCodeRegistry.register(...)` during module initialization. The registry
+  rejects unregistered or mismatched Code pairs. Exceptions that intentionally carry different
+  statuses per instance must expose their registered `code` and `responseType` explicitly.
 - Use Actuator for health and operational endpoints; do not add a custom health controller.
 - Keep application capability dependencies in `agentgo-app-modules`; `agentgo-app` should
   compose those starters rather than re-declaring their infrastructure dependencies.

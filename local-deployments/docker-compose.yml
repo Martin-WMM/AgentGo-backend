@@ -28,7 +28,6 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-agentgo}
       DATABASE_USERNAME: ${POSTGRES_USER:-agentgo}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-agentgo-local}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-local-development-key}
       AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://localhost:9000/application/o/authorize/}
       AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://host.docker.internal:9000/application/o/token/}
       AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://host.docker.internal:9000/application/o/agentgo/jwks/}

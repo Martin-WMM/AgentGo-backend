@@ -7,5 +7,5 @@ import org.springframework.web.multipart.MultipartFile
 fun MultipartFile.bytes(): ByteArray = try {
     inputStream.use { it.readAllBytes() }
 } catch (exception: Exception) {
-    throw FileException(HttpStatus.BAD_REQUEST, "Unable to read uploaded file")
+    throw FileException(2009, "FILE-009", HttpStatus.BAD_REQUEST, "Unable to read uploaded file")
 }
