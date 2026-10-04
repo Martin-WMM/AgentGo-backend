@@ -30,7 +30,7 @@ kover {
     reports {
         filters {
             excludes {
-                classes("com.agentgo.app.AgentGoApplication")
+                classes("com.agentgo.app.AgentGoApplicationKt")
             }
         }
     }

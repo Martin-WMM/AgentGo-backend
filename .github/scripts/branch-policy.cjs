@@ -5,7 +5,7 @@ const PROJECT_URL = 'https://github.com/users/Martin-WMM/projects/2';
 function validateBranchFlow(pr) {
   const head = pr.head.ref;
   const base = pr.base.ref;
-  const release = /^release\/[a-z0-9][a-z0-9._-]*$/;
+  const release = /^release\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
   const task = /^(feature|fix|hotfix)\/(\d+)-[a-z0-9][a-z0-9._-]*$/;
   const taskMatch = head.match(task);
   let expectedSource;
