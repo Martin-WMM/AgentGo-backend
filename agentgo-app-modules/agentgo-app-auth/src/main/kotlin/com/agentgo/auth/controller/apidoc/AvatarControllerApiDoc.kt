@@ -23,6 +23,7 @@ interface AvatarControllerApiDoc {
             ApiResponse(responseCode = "200", description = "Avatar updated", useReturnTypeSchema = true),
             ApiResponse(responseCode = "400", description = "Invalid file"),
             ApiResponse(responseCode = "401", description = "Authentication required"),
+            ApiResponse(responseCode = "413", description = "File exceeds the maximum size of 100 MB"),
         ],
     )
     @PutMapping("/avatar", consumes = ["multipart/form-data"])

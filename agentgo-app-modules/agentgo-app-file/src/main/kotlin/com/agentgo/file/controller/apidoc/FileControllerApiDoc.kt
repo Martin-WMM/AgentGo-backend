@@ -27,6 +27,7 @@ interface FileControllerApiDoc {
             ApiResponse(responseCode = "200", description = "Workspace file uploaded", useReturnTypeSchema = true),
             ApiResponse(responseCode = "400", description = "Invalid workspace path or file"),
             ApiResponse(responseCode = "401", description = "Authentication required"),
+            ApiResponse(responseCode = "413", description = "File exceeds the maximum size of 100 MB"),
         ],
     )
     @PutMapping("/workspace", consumes = ["multipart/form-data"])
