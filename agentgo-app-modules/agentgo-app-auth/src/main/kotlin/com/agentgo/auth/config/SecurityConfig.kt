@@ -29,7 +29,13 @@ class SecurityConfig(
 
         http
             .cors(Customizer.withDefaults())
-            .csrf { csrf -> csrf.ignoringRequestMatchers("/api/auth/logout", "/api/auth/profile") }
+            .csrf { csrf ->
+                csrf.ignoringRequestMatchers(
+                    "/api/auth/logout",
+                    "/api/auth/profile",
+                    "/api/files/**",
+                )
+            }
             .authorizeHttpRequests { authorize ->
                 authorize
                     .requestMatchers(
@@ -76,7 +82,7 @@ class SecurityConfig(
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration().apply {
             allowedOrigins = listOf(authProperties.uiBaseUrl)
-            allowedMethods = listOf("GET", "POST", "PUT", "OPTIONS")
+            allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
             allowedHeaders = listOf("*")
             allowCredentials = true
         }

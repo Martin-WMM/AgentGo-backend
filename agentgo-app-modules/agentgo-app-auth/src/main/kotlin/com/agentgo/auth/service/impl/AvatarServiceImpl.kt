@@ -3,7 +3,9 @@ package com.agentgo.auth.service.impl
 import com.agentgo.auth.service.AvatarService
 import com.agentgo.dto.file.FileMetadataResponse
 import com.agentgo.file.properties.FileProperties
+import com.agentgo.file.exception.EmptyFileException
 import com.agentgo.file.exception.FileException
+import com.agentgo.file.exception.FileTooLargeException
 import com.agentgo.file.mapper.FileMapper
 import com.agentgo.file.repository.FileRepository
 import com.agentgo.file.service.FileService
@@ -86,8 +88,8 @@ class AvatarServiceImpl(
     }
 
     private fun validateFile(file: MultipartFile) {
-        if (file.isEmpty) throw FileException(2002, "FILE-002", HttpStatus.BAD_REQUEST, "File must not be empty")
-        if (file.size > properties.maxFileSizeBytes) throw FileException(2002, "FILE-002", HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the configured size limit")
+        if (file.isEmpty) throw EmptyFileException()
+        if (file.size > properties.maxFileSizeBytes) throw FileTooLargeException(properties.maxFileSizeBytes)
     }
 
     private fun safeFilename(filename: String?, fallback: String): String =

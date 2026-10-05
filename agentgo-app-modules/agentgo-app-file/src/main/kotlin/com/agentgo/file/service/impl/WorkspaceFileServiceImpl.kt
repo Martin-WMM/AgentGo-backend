@@ -3,7 +3,10 @@ package com.agentgo.file.service.impl
 import com.agentgo.dto.file.FileMetadataResponse
 import com.agentgo.file.properties.FileProperties
 import com.agentgo.file.entity.FileEntity
+import com.agentgo.file.exception.EmptyFileException
 import com.agentgo.file.exception.FileException
+import com.agentgo.file.exception.FileTooLargeException
+import com.agentgo.file.exception.InvalidWorkspacePathException
 import com.agentgo.file.mapper.FileMapper
 import com.agentgo.file.repository.FileRepository
 import com.agentgo.file.service.bytes
@@ -100,8 +103,8 @@ class WorkspaceFileServiceImpl(
         entity.metadata["original-filename"] ?: entity.objectKey.substringAfterLast('/')
 
     private fun validateFile(file: MultipartFile) {
-        if (file.isEmpty) throw FileException(2002, "FILE-002", HttpStatus.BAD_REQUEST, "File must not be empty")
-        if (file.size > properties.maxFileSizeBytes) throw FileException(2002, "FILE-002", HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the configured size limit")
+        if (file.isEmpty) throw EmptyFileException()
+        if (file.size > properties.maxFileSizeBytes) throw FileTooLargeException(properties.maxFileSizeBytes)
     }
 
     private fun contentTypeOf(file: MultipartFile): String = file.contentType?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
@@ -112,7 +115,7 @@ class WorkspaceFileServiceImpl(
     private fun normalizeWorkspacePath(path: String): String {
         val normalized = path.replace('\\', '/').trim('/')
         val parts = normalized.split('/')
-        if (normalized.isBlank() || parts.any { it.isBlank() || it == "." || it == ".." }) throw FileException(2001, "FILE-001", HttpStatus.BAD_REQUEST, "Workspace path is invalid")
+        if (normalized.isBlank() || parts.any { it.isBlank() || it == "." || it == ".." }) throw InvalidWorkspacePathException()
         return parts.joinToString("/")
     }
 

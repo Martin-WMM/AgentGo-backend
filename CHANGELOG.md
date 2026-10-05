@@ -35,6 +35,8 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Changed
 
+- Raised the workspace and avatar upload limit to 100 MB and return FILE-011 through FILE-014
+  in the standard `CommonHttpResponse` envelope when an upload is rejected.
 - Centralized project, Java, Kotlin, Spring Boot, Springdoc, LangGraph4j, Spring Shell, and Kover versions in the root `build.gradle.kts`.
 - Standardized the toolchain on Java 25 LTS, Kotlin 2.3.x, and Gradle 9.1+.
 - Configured the build to publish exactly two executable Spring Boot Jars: the web application and the CLI.

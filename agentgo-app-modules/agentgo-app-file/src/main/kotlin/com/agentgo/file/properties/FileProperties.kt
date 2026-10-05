@@ -10,5 +10,5 @@ data class FileProperties(
     val bucketName: String = "agentgo-bucket",
     val avatarPrefix: String = "Avatars",
     val workspacePrefix: String = "workspace",
-    val maxFileSizeBytes: Long = 10L * 1024 * 1024,
+    val maxFileSizeBytes: Long = 100L * 1024 * 1024,
 )

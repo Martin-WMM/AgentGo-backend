@@ -1,6 +1,17 @@
+server:
+  tomcat:
+    # Keep the connector limit above the multipart file limit so an oversized upload
+    # reaches application error handling instead of being closed by Tomcat.
+    max-http-form-post-size: ${AGENTGO_FILE_MAX_REQUEST_SIZE:110MB}
+    max-swallow-size: ${AGENTGO_FILE_MAX_REQUEST_SIZE:110MB}
+
 spring:
   application:
     name: agentgo-backend
+  servlet:
+    multipart:
+      max-file-size: ${AGENTGO_FILE_MAX_SIZE:100MB}
+      max-request-size: ${AGENTGO_FILE_MAX_REQUEST_SIZE:110MB}
   security:
     oauth2:
       client:
@@ -15,14 +26,14 @@ spring:
         provider:
           authentik:
             authorization-uri: ${AGENTGO_OIDC_AUTHORIZATION_URI:http://localhost:9000/application/o/authorize/}
-            token-uri: ${AGENTGO_OIDC_TOKEN_URI:http://host.docker.internal:9000/application/o/token/}
-            jwk-set-uri: ${AGENTGO_OIDC_JWK_SET_URI:http://host.docker.internal:9000/application/o/agentgo/jwks/}
-            user-info-uri: ${AGENTGO_OIDC_USER_INFO_URI:http://host.docker.internal:9000/application/o/userinfo/}
+            token-uri: ${AGENTGO_OIDC_TOKEN_URI:http://localhost:9000/application/o/token/}
+            jwk-set-uri: ${AGENTGO_OIDC_JWK_SET_URI:http://localhost:9000/application/o/agentgo/jwks/}
+            user-info-uri: ${AGENTGO_OIDC_USER_INFO_URI:http://localhost:9000/application/o/userinfo/}
             user-name-attribute: preferred_username
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/agentgo}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/agentgo}
     username: ${DATABASE_USERNAME:agentgo}
-    password: ${DATABASE_PASSWORD:agentgo-local}
+    password: ${DATABASE_PASSWORD:agentgo}
   jpa:
     open-in-view: false
     hibernate:
@@ -80,3 +91,4 @@ agentgo:
     minio-access-key: ${MINIO_ACCESS_KEY:minioadmin}
     minio-secret-key: ${MINIO_SECRET_KEY:local-minio-password-change-me}
     bucket-name: ${MINIO_BUCKET:agentgo-bucket}
+    max-file-size-bytes: ${AGENTGO_FILE_MAX_SIZE_BYTES:104857600}
