@@ -26,5 +26,10 @@ class ResponseCodeRegistryTest {
     fun resolvesNumericCodeToItsResponseTypeAndDescription() {
         assertEquals("FILE-001", ResponseCodeRegistry.responseType(2001))
         assertEquals("File name or path is invalid.", ResponseCodeRegistry.description(2001)?.meaning)
+        assertEquals("FILE-011", ResponseCodeRegistry.responseType(2011))
+        assertEquals("Uploaded file exceeds the configured size limit.", ResponseCodeRegistry.description(2011)?.meaning)
+        assertEquals("FILE-012", ResponseCodeRegistry.responseType(2012))
+        assertEquals("FILE-013", ResponseCodeRegistry.responseType(2013))
+        assertEquals("FILE-014", ResponseCodeRegistry.responseType(2014))
     }
 }
