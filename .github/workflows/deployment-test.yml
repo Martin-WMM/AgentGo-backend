@@ -131,7 +131,6 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DEPLOY_UI_BASE_URL: http://www.agentgo.agent.com:28080/ui
           DEPLOY_POSTGRES_PASSWORD: ${{ secrets.AGENTGO_POSTGRES_PASSWORD }}
           KEY_FILE: ${{ steps.ssh.outputs.key_file }}
           KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
@@ -141,17 +140,19 @@ jobs:
           set -euo pipefail
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
           if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin"; fi
-          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_UI_BASE_URL='$DEPLOY_UI_BASE_URL' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
+          # Public browser URLs use DEPLOY_HOST IP + gateway :28080 path map (/ui, /backend, Authentik at /).
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_HOST='$DEPLOY_HOST' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$DEPLOY_PATH"
+          gateway="http://${DEPLOY_HOST}:28080"
           # Keep host Authentik (:20900) and gateway (:28080). Do not rewrite AUTHENTIK_* stack secrets.
           if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AGENTGO_OIDC_.*|AGENTGO_AUTHENTIK_BROWSER_BASE_URL|AGENTGO_AUTHENTIK_API_BASE_URL|MINIO_ENDPOINT)=' .env > .env.next || true; else : > .env.next; fi
-          printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$DEPLOY_UI_BASE_URL" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
-          printf 'AGENTGO_OIDC_AUTHORIZATION_URI=http://www.agentgo.agent.com:28080/application/o/authorize/\n' >> .env.next
+          printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s/ui\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$gateway" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
+          printf 'AGENTGO_OIDC_AUTHORIZATION_URI=%s/application/o/authorize/\n' "$gateway" >> .env.next
           printf 'AGENTGO_OIDC_TOKEN_URI=http://host.docker.internal:20900/application/o/token/\n' >> .env.next
           printf 'AGENTGO_OIDC_JWK_SET_URI=http://host.docker.internal:20900/application/o/agentgo/jwks/\n' >> .env.next
           printf 'AGENTGO_OIDC_USER_INFO_URI=http://host.docker.internal:20900/application/o/userinfo/\n' >> .env.next
-          printf 'AGENTGO_AUTHENTIK_BROWSER_BASE_URL=http://www.agentgo.agent.com:28080\n' >> .env.next
+          printf 'AGENTGO_AUTHENTIK_BROWSER_BASE_URL=%s\n' "$gateway" >> .env.next
           printf 'AGENTGO_AUTHENTIK_API_BASE_URL=http://host.docker.internal:20900\n' >> .env.next
           printf 'MINIO_ENDPOINT=http://host.docker.internal:20910\n' >> .env.next
           mv .env.next .env
