@@ -123,7 +123,7 @@ jobs:
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
           if ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker image inspect '$IMAGE_NAME:$IMAGE_TAG' >/dev/null 2>&1"; then echo 'exists=true' >> "$GITHUB_OUTPUT"; else echo 'exists=false' >> "$GITHUB_OUTPUT"; fi
 
-      - name: Pull image and start TEST service
+      - name: Transfer image and start TEST service
         id: deploy
         shell: bash
         env:
@@ -134,14 +134,19 @@ jobs:
           DEPLOY_POSTGRES_PASSWORD: ${{ secrets.AGENTGO_POSTGRES_PASSWORD }}
           KEY_FILE: ${{ steps.ssh.outputs.key_file }}
           KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SERVER_IMAGE_EXISTS: ${{ steps.server-image-check.outputs.exists }}
         run: |
           set -euo pipefail
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
-          if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin"; fi
+          # Avoid slow/unreliable GHCR pulls on the TEST host: stream the runner image over SSH.
+          if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then
+            if ! docker image inspect "$IMAGE_NAME:$IMAGE_TAG" >/dev/null 2>&1; then
+              docker pull "$IMAGE_NAME:$IMAGE_TAG"
+            fi
+            docker save "$IMAGE_NAME:$IMAGE_TAG" | gzip -1 | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" 'gzip -d | docker load'
+          fi
           # Public browser URLs use DEPLOY_HOST IP + gateway :28080 path map (/ui, /backend, Authentik at /).
-          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_HOST='$DEPLOY_HOST' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' DEPLOY_HOST='$DEPLOY_HOST' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$DEPLOY_PATH"
           gateway="http://${DEPLOY_HOST}:28080"
@@ -158,7 +163,6 @@ jobs:
           mv .env.next .env
           chmod 600 .env
           docker compose config -q
-          [[ "$SERVER_IMAGE_EXISTS" == true ]] || docker compose pull agentgo-app
           # Host already runs Authentik on :20900; only start the backend app stack.
           docker compose up -d agentgo-app
           REMOTE
