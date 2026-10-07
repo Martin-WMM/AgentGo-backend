@@ -21,16 +21,17 @@ services:
       DATABASE_URL: jdbc:postgresql://agentgo-backend-postgresql:5432/${AGENTGO_POSTGRES_DB:-agentgo}
       DATABASE_USERNAME: ${AGENTGO_POSTGRES_USER:-agentgo}
       DATABASE_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:?AGENTGO_POSTGRES_PASSWORD is required}
-      AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://host.docker.internal:9000/application/o/authorize/}
-      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://host.docker.internal:9000/application/o/token/}
-      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://host.docker.internal:9000/application/o/agentgo/jwks/}
-      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://host.docker.internal:9000/application/o/userinfo/}
+      # Browser authorize/logout via public gateway :28080. Token/JWKS via host Authentik :20900.
+      AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://www.agentgo.agent.com:28080/application/o/authorize/}
+      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://host.docker.internal:20900/application/o/token/}
+      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://host.docker.internal:20900/application/o/agentgo/jwks/}
+      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://host.docker.internal:20900/application/o/userinfo/}
       AGENTGO_OIDC_CLIENT_ID: ${AGENTGO_OIDC_CLIENT_ID:-agentgo}
       AGENTGO_OIDC_CLIENT_SECRET: ${AGENTGO_OIDC_CLIENT_SECRET:-}
-      AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:?AGENTGO_UI_BASE_URL is required}
-      AGENTGO_AUTHENTIK_API_BASE_URL: ${AGENTGO_AUTHENTIK_API_BASE_URL:-http://host.docker.internal:20083}
-      AGENTGO_AUTHENTIK_BROWSER_BASE_URL: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:?AGENTGO_AUTHENTIK_BROWSER_BASE_URL is required}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://host.docker.internal:9001}
+      AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:-http://www.agentgo.agent.com:28080/ui}
+      AGENTGO_AUTHENTIK_API_BASE_URL: ${AGENTGO_AUTHENTIK_API_BASE_URL:-http://host.docker.internal:20900}
+      AGENTGO_AUTHENTIK_BROWSER_BASE_URL: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:-http://www.agentgo.agent.com:28080}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://host.docker.internal:20910}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-local-minio-password-change-me}
       MINIO_BUCKET: ${MINIO_BUCKET:-agentgo-bucket}
