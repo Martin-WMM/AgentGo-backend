@@ -179,7 +179,23 @@ jobs:
         run: |
           set -euo pipefail
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
-          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker inspect -f '{{.State.Running}}' agentgo-app | grep -qx true && curl --fail --silent http://127.0.0.1:20082/actuator/health >/dev/null"
+          # Spring Boot may need more than a single probe after first boot / Flyway.
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          docker inspect -f '{{.State.Running}}' agentgo-app | grep -qx true
+          for i in $(seq 1 36); do
+            if curl --fail --silent --max-time 5 http://127.0.0.1:20082/actuator/health >/dev/null; then
+              curl --fail --silent --max-time 5 http://127.0.0.1:20082/actuator/health
+              echo
+              exit 0
+            fi
+            echo "waiting for actuator health ($i/36)..."
+            sleep 5
+          done
+          echo 'agentgo-app failed health checks; recent logs:' >&2
+          docker logs agentgo-app --tail 120 >&2 || true
+          exit 1
+          REMOTE
 
       - name: Write deployment summary
         if: always()
