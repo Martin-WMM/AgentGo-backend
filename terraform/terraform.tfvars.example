@@ -1,6 +1,7 @@
 # Copy to terraform.tfvars locally, or pass variables through CI secrets.
 # terraform.tfvars is ignored by Git.
 authentik_url = "http://localhost:9000"
+ui_base_url   = "http://localhost:5173"
 
 # Do not put the API token in this file. Prefer:
 #   $env:AUTHENTIK_TOKEN = "..."
@@ -20,3 +21,10 @@ redirect_uris = [
     redirect_uri_type = "logout"
   }
 ]
+
+# MinIO S3 API used to create the AgentGo application bucket.
+minio_server   = "127.0.0.1:9000"
+minio_user     = "replace-me"
+minio_password = "replace-me"
+minio_ssl      = false
+minio_bucket   = "agentgo-bucket"

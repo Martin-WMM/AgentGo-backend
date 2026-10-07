@@ -6,5 +6,9 @@ terraform {
       source  = "goauthentik/authentik"
       version = "~> 2026.8.0"
     }
+    minio = {
+      source  = "aminueza/minio"
+      version = "~> 3.44.0"
+    }
   }
 }

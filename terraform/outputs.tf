@@ -18,3 +18,8 @@ output "client_secret" {
   value       = authentik_provider_oauth2.agentgo.client_secret
   sensitive   = true
 }
+
+output "minio_bucket" {
+  description = "MinIO bucket provisioned for AgentGo."
+  value       = minio_s3_bucket.agentgo.bucket
+}

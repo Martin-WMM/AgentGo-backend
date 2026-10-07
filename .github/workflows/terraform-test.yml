@@ -1,0 +1,156 @@
+name: Terraform TEST
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentgo-backend-terraform-test
+  cancel-in-progress: false
+
+jobs:
+  validate-ref:
+    name: Validate release branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" == release/* ]] || {
+            echo "Terraform TEST can only run from a release/* branch." >&2
+            exit 1
+          }
+
+  apply:
+    name: Apply Authentik and MinIO Terraform on TEST
+    needs: validate-ref
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - name: Check out selected revision
+        uses: actions/checkout@v4
+
+      - name: Prepare deployment SSH credentials
+        id: ssh
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          key_file="$RUNNER_TEMP/agentgo-backend-terraform-key"
+          known_hosts_file="$RUNNER_TEMP/agentgo-backend-terraform-known-hosts"
+          install -m 600 /dev/null "$key_file"
+          install -m 600 /dev/null "$known_hosts_file"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key_file"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$known_hosts_file"
+          echo "key_file=$key_file" >> "$GITHUB_OUTPUT"
+          echo "known_hosts_file=$known_hosts_file" >> "$GITHUB_OUTPUT"
+
+      - name: Sync Terraform sources to TEST
+        id: sync
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          KEY_FILE: ${{ steps.ssh.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$DEPLOY_PATH/terraform'"
+          rsync -az --delete \
+            --exclude '.terraform/' \
+            --exclude '*.tfstate' \
+            --exclude '*.tfstate.*' \
+            --exclude '*.tfvars' \
+            --exclude 'environments/' \
+            -e "ssh -i $KEY_FILE -p $DEPLOY_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE" \
+            terraform/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/terraform/"
+
+      - name: Apply Terraform on TEST host
+        id: apply
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          AUTHENTIK_TOKEN: ${{ secrets.AUTHENTIK_TOKEN }}
+          KEY_FILE: ${{ steps.ssh.outputs.key_file }}
+          KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_HOST='$DEPLOY_HOST' AUTHENTIK_TOKEN='$AUTHENTIK_TOKEN' bash -s" <<'REMOTE'
+          set -euo pipefail
+          command -v terraform >/dev/null
+          cd "$DEPLOY_PATH/terraform"
+          set -a
+          # shellcheck disable=SC1091
+          source "$DEPLOY_PATH/.env"
+          set +a
+          : "${AUTHENTIK_TOKEN:?AUTHENTIK_TOKEN is required}"
+          : "${MINIO_ROOT_USER:?MINIO_ROOT_USER missing from DEPLOY_PATH/.env}"
+          : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD missing from DEPLOY_PATH/.env}"
+
+          gateway="http://${DEPLOY_HOST}:28080"
+          authentik_url="http://127.0.0.1:20900"
+          ui_base_url="${gateway}/ui"
+          backend_callback="${gateway}/backend/login/oauth2/code/authentik"
+
+          cat > terraform.auto.tfvars <<EOF
+          authentik_url   = "${authentik_url}"
+          authentik_token = "${AUTHENTIK_TOKEN}"
+          ui_base_url     = "${ui_base_url}"
+          minio_server    = "127.0.0.1:20910"
+          minio_user      = "${MINIO_ROOT_USER}"
+          minio_password  = "${MINIO_ROOT_PASSWORD}"
+          minio_ssl       = false
+          minio_bucket    = "agentgo-bucket"
+          client_id       = "agentgo"
+          redirect_uris = [
+            {
+              url               = "${backend_callback}"
+              matching_mode     = "strict"
+              redirect_uri_type = "authorization"
+            },
+            {
+              url               = "${ui_base_url}"
+              matching_mode     = "strict"
+              redirect_uri_type = "logout"
+            },
+            {
+              url               = "${ui_base_url}/"
+              matching_mode     = "strict"
+              redirect_uri_type = "logout"
+            }
+          ]
+          EOF
+          chmod 600 terraform.auto.tfvars
+
+          terraform init -input=false
+          terraform apply -input=false -auto-approve
+          terraform output -json > "$DEPLOY_PATH/terraform-outputs.json"
+          chmod 600 "$DEPLOY_PATH/terraform-outputs.json"
+          REMOTE
+
+      - name: Write Terraform TEST summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## AgentGo Backend Terraform TEST'
+            echo
+            echo '- Environment: TEST'
+            echo "- Source commit: $GITHUB_SHA"
+            echo "- Sync Terraform sources: ${{ steps.sync.outcome }}"
+            echo "- Apply on TEST host: ${{ steps.apply.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          [[ "${{ steps.sync.outcome }}" == success && "${{ steps.apply.outcome }}" == success ]]
