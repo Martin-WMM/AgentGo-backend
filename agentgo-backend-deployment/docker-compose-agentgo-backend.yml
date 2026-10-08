@@ -23,12 +23,15 @@ services:
       DATABASE_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:?AGENTGO_POSTGRES_PASSWORD is required}
       # Browser URLs: DEPLOY_HOST IP + gateway :28080. Token/JWKS: host Authentik :20900.
       # Deployment TEST injects the real IP via .env; defaults match the current TEST host.
+      # Browser authorize + server-side token/JWKS/userinfo must use the same public
+      # Authentik host/domain. host.docker.internal breaks Authentik tenant lookup.
       AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://124.174.118.184:28080/application/o/authorize/}
-      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://host.docker.internal:20900/application/o/token/}
-      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://host.docker.internal:20900/application/o/agentgo/jwks/}
-      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://host.docker.internal:20900/application/o/userinfo/}
+      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://124.174.118.184:28080/application/o/token/}
+      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://124.174.118.184:28080/application/o/agentgo/jwks/}
+      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://124.174.118.184:28080/application/o/userinfo/}
       AGENTGO_OIDC_CLIENT_ID: ${AGENTGO_OIDC_CLIENT_ID:-agentgo}
       AGENTGO_OIDC_CLIENT_SECRET: ${AGENTGO_OIDC_CLIENT_SECRET:-}
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI:-http://124.174.118.184:28080/backend/login/oauth2/code/authentik}
       AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:-http://124.174.118.184:28080/ui}
       AGENTGO_AUTHENTIK_API_BASE_URL: ${AGENTGO_AUTHENTIK_API_BASE_URL:-http://host.docker.internal:20900}
       AGENTGO_AUTHENTIK_BROWSER_BASE_URL: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:-http://124.174.118.184:28080}

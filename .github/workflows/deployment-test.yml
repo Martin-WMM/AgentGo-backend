@@ -151,12 +151,15 @@ jobs:
           cd "$DEPLOY_PATH"
           gateway="http://${DEPLOY_HOST}:28080"
           # Keep host Authentik (:20900) and gateway (:28080). Do not rewrite AUTHENTIK_* stack secrets.
-          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AGENTGO_OIDC_.*|AGENTGO_AUTHENTIK_BROWSER_BASE_URL|AGENTGO_AUTHENTIK_API_BASE_URL|MINIO_ENDPOINT)=' .env > .env.next || true; else : > .env.next; fi
+          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AGENTGO_OIDC_.*|AGENTGO_AUTHENTIK_BROWSER_BASE_URL|AGENTGO_AUTHENTIK_API_BASE_URL|MINIO_ENDPOINT|SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI)=' .env > .env.next || true; else : > .env.next; fi
           printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s/ui\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$gateway" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
           printf 'AGENTGO_OIDC_AUTHORIZATION_URI=%s/application/o/authorize/\n' "$gateway" >> .env.next
-          printf 'AGENTGO_OIDC_TOKEN_URI=http://host.docker.internal:20900/application/o/token/\n' >> .env.next
-          printf 'AGENTGO_OIDC_JWK_SET_URI=http://host.docker.internal:20900/application/o/agentgo/jwks/\n' >> .env.next
-          printf 'AGENTGO_OIDC_USER_INFO_URI=http://host.docker.internal:20900/application/o/userinfo/\n' >> .env.next
+          # Token/JWKS/userinfo must use the same public Authentik host as authorize;
+          # host.docker.internal makes Authentik resolve the wrong tenant/provider.
+          printf 'AGENTGO_OIDC_TOKEN_URI=%s/application/o/token/\n' "$gateway" >> .env.next
+          printf 'AGENTGO_OIDC_JWK_SET_URI=%s/application/o/agentgo/jwks/\n' "$gateway" >> .env.next
+          printf 'AGENTGO_OIDC_USER_INFO_URI=%s/application/o/userinfo/\n' "$gateway" >> .env.next
+          printf 'SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI=%s/backend/login/oauth2/code/authentik\n' "$gateway" >> .env.next
           printf 'AGENTGO_AUTHENTIK_BROWSER_BASE_URL=%s\n' "$gateway" >> .env.next
           printf 'AGENTGO_AUTHENTIK_API_BASE_URL=http://host.docker.internal:20900\n' >> .env.next
           printf 'MINIO_ENDPOINT=http://host.docker.internal:20910\n' >> .env.next
