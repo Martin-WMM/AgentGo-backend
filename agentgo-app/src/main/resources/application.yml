@@ -82,6 +82,7 @@ agentgo:
       server-description: ${AGENTGO_OPENAPI_SERVER_DESCRIPTION:}
   auth:
     ui-base-url: ${AGENTGO_UI_BASE_URL:http://localhost:5173}
+    oidc-client-id: ${AGENTGO_OIDC_CLIENT_ID:agentgo}
     authentik-api-base-url: ${AGENTGO_AUTHENTIK_API_BASE_URL:http://localhost:9000}
     authentik-api-token: ${AGENTGO_AUTHENTIK_API_TOKEN:}
     authentik-browser-base-url: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:http://localhost:9000}

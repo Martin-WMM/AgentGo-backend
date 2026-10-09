@@ -40,6 +40,16 @@ variable "redirect_uris" {
       url               = "http://localhost:5173"
       matching_mode     = "strict"
       redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:5173/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:5173/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
     }
   ]
 }

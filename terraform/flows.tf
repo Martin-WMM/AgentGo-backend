@@ -50,12 +50,12 @@ resource "authentik_flow_stage_binding" "agentgo_invalidation_logout" {
   order  = 0
 }
 
-# After the session ends, return to the UI. The UI starts a new OIDC login, so a
-# successful sign-in comes back to the UI instead of Authentik's own home page.
+# After the session ends, return to the UI signed-out gate. Do not auto-start
+# OIDC login here — the UI shows a Sign in CTA so logout stays intentional.
 resource "authentik_stage_redirect" "agentgo_logout_redirect" {
   name          = "AgentGo Logout Redirect"
   mode          = "static"
-  target_static = "http://localhost:5173"
+  target_static = "${trimsuffix(var.ui_base_url, "/")}/?signedOut=1"
   keep_context  = false
 }
 
