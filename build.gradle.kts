@@ -20,6 +20,7 @@ extra["springdocVersion"] = "3.1.1"
 extra["langgraph4jVersion"] = "1.9.1"
 extra["springShellVersion"] = "4.0.3"
 extra["minioVersion"] = "9.0.3"
+extra["mockitoKotlinVersion"] = "5.4.0"
 
 allprojects {
     group = "com.agentgo"

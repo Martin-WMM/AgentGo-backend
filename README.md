@@ -23,11 +23,11 @@ AgentGo Backend 是基于 Kotlin、Spring Boot 和 Spring MVC 的服务端，提
 ## 2. Updates / 更新
 
 - Modular Gradle architecture with reusable application starters.
-- Authentik integration, profile/session APIs, and file capabilities.
+- Authentik integration, profile/session APIs, file capabilities, and user-owned model management.
 - Coverage and build quality gates are enforced by CI.
 
 - 采用模块化 Gradle 架构和可复用应用 Starter。
-- 已接入 Authentik，并提供用户资料、会话和文件能力。
+- 已接入 Authentik，并提供用户资料、会话、文件能力以及用户模型管理。
 - CI 强制执行测试、覆盖率和构建质量检查。
 
 ## 3. Getting Started / 快速开始

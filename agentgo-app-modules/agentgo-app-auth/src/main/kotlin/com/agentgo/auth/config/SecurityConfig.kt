@@ -36,6 +36,7 @@ class SecurityConfig(
                     "/api/auth/logout",
                     "/api/auth/profile",
                     "/api/files/**",
+                    "/api/models/**",
                 )
             }
             .authorizeHttpRequests { authorize ->

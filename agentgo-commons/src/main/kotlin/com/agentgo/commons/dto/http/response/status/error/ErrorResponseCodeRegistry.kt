@@ -7,6 +7,7 @@ object ErrorResponseCodeRegistry {
     val codeDescriptions: Map<String, ResponseCodeDescription> = buildMap {
         putAll(AuthResponseCodeRegistry.codeDescriptions)
         putAll(FileResponseCodeRegistry.codeDescriptions)
+        putAll(ModelsResponseCodeRegistry.codeDescriptions)
         putAll(ValidationResponseCodeRegistry.codeDescriptions)
         putAll(ResourceResponseCodeRegistry.codeDescriptions)
         putAll(IntegrationResponseCodeRegistry.codeDescriptions)
@@ -16,6 +17,7 @@ object ErrorResponseCodeRegistry {
     val responseTypesByCode: Map<Int, String> = buildMap {
         putAll(AuthResponseCodeRegistry.responseTypesByCode)
         putAll(FileResponseCodeRegistry.responseTypesByCode)
+        putAll(ModelsResponseCodeRegistry.responseTypesByCode)
         putAll(ValidationResponseCodeRegistry.responseTypesByCode)
         putAll(ResourceResponseCodeRegistry.responseTypesByCode)
         putAll(IntegrationResponseCodeRegistry.responseTypesByCode)

@@ -20,12 +20,16 @@ module-local version literals when a version is already defined there.
 - `agentgo-app-modules:agentgo-observability-starter`: Actuator, metrics, and tracing capabilities.
 - `agentgo-app-modules:agentgo-persistence-starter`: JPA and PostgreSQL capabilities.
 - `agentgo-app-modules:agentgo-ai-starter`: AgentGo core workflow capabilities. Spring AI is not wired in yet.
+- `agentgo-app-modules:agentgo-app-auth`: Authentik OIDC login, session, and profile capabilities.
+- `agentgo-app-modules:agentgo-app-file`: Workspace and avatar file metadata with MinIO storage.
+- `agentgo-app-modules:agentgo-app-models`: Authenticated user-owned AI model configuration CRUD.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
 - `agentgo-commons`: Shared utility types, helpers, and the standardized HTTP, pagination, and SSE response DTOs.
 - `agentgo-core`: AI workflow and orchestration components, including LangGraph4j integration.
 - `agentgo-dto`: Cross-module business data transfer objects and protocol models. DTOs shared
   between modules belong here, except for the standardized HTTP, pagination, and SSE response DTOs.
+- `agentgo-dto:agentgo-dto-models`: Request and response DTOs for user-owned model management.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
 - `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
