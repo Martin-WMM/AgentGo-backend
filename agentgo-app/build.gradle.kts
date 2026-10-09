@@ -18,6 +18,7 @@ dependencies {
     implementation(kotlin("reflect"))
     implementation(project(":agentgo-app-modules:agentgo-app-auth"))
     implementation(project(":agentgo-app-modules:agentgo-app-file"))
+    implementation(project(":agentgo-app-modules:agentgo-app-models"))
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 }

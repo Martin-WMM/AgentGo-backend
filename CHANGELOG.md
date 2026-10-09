@@ -6,6 +6,9 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Added
 
+- Added `agentgo-app-models` with user-scoped model CRUD (`/api/models`), Flyway `tbl_model`,
+  and the focused `agentgo-dto-models` DTO module for LLM, multimodal, embedding, ASR, TTS,
+  Speech2Speech, and other provider configurations.
 - Added an authenticated user profile API and UI settings form that synchronize display name,
   email, and avatar URL with Authentik through the server-side Core User API.
 - Added configurable SpringDoc OpenAPI metadata to `agentgo-springboot-starter`, including title,
