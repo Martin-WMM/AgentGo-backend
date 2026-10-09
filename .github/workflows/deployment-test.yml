@@ -174,11 +174,17 @@ jobs:
           printf 'AGENTGO_AUTHENTIK_BROWSER_BASE_URL=%s\n' "$gateway" >> .env.next
           printf 'AGENTGO_AUTHENTIK_API_BASE_URL=http://host.docker.internal:20900\n' >> .env.next
           printf 'MINIO_ENDPOINT=http://host.docker.internal:20910\n' >> .env.next
+          if ! grep -q '^MINIO_ACCESS_KEY=.\+' .env.next; then
+            echo 'MINIO_ACCESS_KEY is missing; sync it from the host MinIO root user before uploads will work' >&2
+          fi
+          if ! grep -q '^MINIO_SECRET_KEY=.\+' .env.next; then
+            echo 'MINIO_SECRET_KEY is missing; sync it from the host MinIO root password before uploads will work' >&2
+          fi
           mv .env.next .env
           chmod 600 .env
           docker compose config -q
           # Host already runs Authentik on :20900; only start the backend app stack.
-          docker compose up -d agentgo-app
+          docker compose -p agentgo up -d agentgo-app
           REMOTE
 
       - name: Verify TEST deployment
