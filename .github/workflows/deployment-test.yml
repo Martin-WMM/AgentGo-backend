@@ -150,8 +150,13 @@ jobs:
           set -euo pipefail
           cd "$DEPLOY_PATH"
           gateway="http://${DEPLOY_HOST}:28080"
-          # Keep host Authentik (:20900) and gateway (:28080). Do not rewrite AUTHENTIK_* stack secrets.
-          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AGENTGO_OIDC_.*|AGENTGO_AUTHENTIK_BROWSER_BASE_URL|AGENTGO_AUTHENTIK_API_BASE_URL|MINIO_ENDPOINT|SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI)=' .env > .env.next || true; else : > .env.next; fi
+          # Keep host Authentik (:20900) and gateway (:28080). Do not rewrite AUTHENTIK_*
+          # stack secrets. Preserve OIDC client id/secret; only rewrite public URI settings.
+          if [[ -f .env ]]; then
+            grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AGENTGO_OIDC_AUTHORIZATION_URI|AGENTGO_OIDC_TOKEN_URI|AGENTGO_OIDC_JWK_SET_URI|AGENTGO_OIDC_USER_INFO_URI|AGENTGO_OIDC_ISSUER_URI|AGENTGO_AUTHENTIK_BROWSER_BASE_URL|AGENTGO_AUTHENTIK_API_BASE_URL|MINIO_ENDPOINT|SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI)=' .env > .env.next || true
+          else
+            : > .env.next
+          fi
           printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s/ui\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$gateway" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
           printf 'AGENTGO_OIDC_AUTHORIZATION_URI=%s/application/o/authorize/\n' "$gateway" >> .env.next
           # Token/JWKS/userinfo must use the same public Authentik host as authorize;
@@ -159,6 +164,12 @@ jobs:
           printf 'AGENTGO_OIDC_TOKEN_URI=%s/application/o/token/\n' "$gateway" >> .env.next
           printf 'AGENTGO_OIDC_JWK_SET_URI=%s/application/o/agentgo/jwks/\n' "$gateway" >> .env.next
           printf 'AGENTGO_OIDC_USER_INFO_URI=%s/application/o/userinfo/\n' "$gateway" >> .env.next
+          if ! grep -q '^AGENTGO_OIDC_CLIENT_ID=' .env.next; then
+            printf 'AGENTGO_OIDC_CLIENT_ID=agentgo\n' >> .env.next
+          fi
+          if ! grep -q '^AGENTGO_OIDC_CLIENT_SECRET=.\+' .env.next; then
+            echo 'AGENTGO_OIDC_CLIENT_SECRET is missing; sync it from Authentik before login will work' >&2
+          fi
           printf 'SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI=%s/backend/login/oauth2/code/authentik\n' "$gateway" >> .env.next
           printf 'AGENTGO_AUTHENTIK_BROWSER_BASE_URL=%s\n' "$gateway" >> .env.next
           printf 'AGENTGO_AUTHENTIK_API_BASE_URL=http://host.docker.internal:20900\n' >> .env.next
