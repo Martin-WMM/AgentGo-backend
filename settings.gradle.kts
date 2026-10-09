@@ -26,6 +26,8 @@ include(
     ":agentgo-commons",
     ":agentgo-core",
     ":agentgo-dto",
+    ":agentgo-dto:agentgo-dto-models",
+    ":agentgo-app-modules:agentgo-app-models",
     ":agentgo-springboot-starter",
     ":agentgo-cli",
 )
