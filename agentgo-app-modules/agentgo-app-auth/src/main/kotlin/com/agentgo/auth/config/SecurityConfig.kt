@@ -13,6 +13,8 @@ import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Configuration
 class SecurityConfig(
@@ -75,7 +77,13 @@ class SecurityConfig(
     private fun authentikEndSessionUri(): String {
         val base = authProperties.authentikBrowserBaseUrl.trimEnd('/')
         val slug = authProperties.authentikApplicationSlug.trim().trim('/').ifBlank { "agentgo" }
-        return "$base/application/o/$slug/end-session/"
+        val clientId = URLEncoder.encode(
+            authProperties.oidcClientId.trim().ifBlank { "agentgo" },
+            StandardCharsets.UTF_8,
+        )
+        val postLogout = URLEncoder.encode(authProperties.signedOutUiUrl(), StandardCharsets.UTF_8)
+        return "$base/application/o/$slug/end-session/" +
+            "?client_id=$clientId&post_logout_redirect_uri=$postLogout"
     }
 
     @Bean
