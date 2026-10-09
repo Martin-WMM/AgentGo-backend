@@ -4,6 +4,7 @@ import com.agentgo.commons.dto.http.response.status.error.ErrorResponseCodeRegis
 import com.agentgo.commons.dto.http.response.status.success.AuthResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.BaseResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.FileResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.ModelsResponseCodeRegistry
 
 /**
  * Aggregate numeric response-code lookup table.
@@ -17,6 +18,7 @@ object ResponseCodeRegistry {
         putAll(BaseResponseCodeRegistry.responseTypesByCode)
         putAll(AuthResponseCodeRegistry.responseTypesByCode)
         putAll(FileResponseCodeRegistry.responseTypesByCode)
+        putAll(ModelsResponseCodeRegistry.responseTypesByCode)
         putAll(ErrorResponseCodeRegistry.responseTypesByCode)
     }
 
@@ -29,6 +31,7 @@ object ResponseCodeRegistry {
             BaseResponseCodeRegistry.codeDescriptions[type]
                 ?: AuthResponseCodeRegistry.codeDescriptions[type]
                 ?: FileResponseCodeRegistry.codeDescriptions[type]
+                ?: ModelsResponseCodeRegistry.codeDescriptions[type]
                 ?: ErrorResponseCodeRegistry.description(type)
         }
 }
