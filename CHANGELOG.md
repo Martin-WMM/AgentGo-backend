@@ -4,12 +4,23 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ## [0.1.0-SNAPSHOT] - Unreleased
 
+### Fixed
+
+- RP-initiated logout now sends Authentik `id_token_hint` with `post_logout_redirect_uri`
+  (Authentik rejects the redirect alone as a malformed request).
+- Local Compose OIDC token/JWKS/userinfo calls go through `authentik-oidc` Host rewrite so
+  ID token `iss` is `http://localhost:9000/...` and browser end-session validates the hint.
+- Compose splits **dev** infra (default) from **local** UI/app (`--profile local`) so
+  `:5173`/`:8080` and `:20080`/`:20082` stay isolated.
+
 ### Added
 
 - Added `agentgo-app-models` with user-scoped model CRUD (`/api/v1/models`), Flyway `tbl_model`,
   and the focused `agentgo-dto-models` DTO module for LLM, multimodal, embedding, ASR, TTS,
   Speech2Speech, and other provider configurations.
 - Added shared `ApiVersions` / `ApiPaths` constants in `agentgo-commons` for URI path versioning.
+- Expanded Springdoc OpenAPI tag, operation, parameter, response, and DTO schema descriptions
+  for Authentication, Avatar, Files, and Models APIs.
 - Added an authenticated user profile API and UI settings form that synchronize display name,
   email, and avatar URL with Authentik through the server-side Core User API.
 - Added configurable SpringDoc OpenAPI metadata to `agentgo-springboot-starter`, including title,

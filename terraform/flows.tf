@@ -50,20 +50,10 @@ resource "authentik_flow_stage_binding" "agentgo_invalidation_logout" {
   order  = 0
 }
 
-# After the session ends, return to the UI signed-out gate. Do not auto-start
-# OIDC login here — the UI shows a Sign in CTA so logout stays intentional.
-resource "authentik_stage_redirect" "agentgo_logout_redirect" {
-  name          = "AgentGo Logout Redirect"
-  mode          = "static"
-  target_static = "${trimsuffix(var.ui_base_url, "/")}/?signedOut=1"
-  keep_context  = false
-}
-
-resource "authentik_flow_stage_binding" "agentgo_invalidation_redirect" {
-  target = authentik_flow.agentgo_invalidation.uuid
-  stage  = authentik_stage_redirect.agentgo_logout_redirect.id
-  order  = 10
-}
+# Do not bind a static RedirectStage here. Authentik appends SessionEndStage on
+# RP-initiated logout and honors post_logout_redirect_uri from the backend
+# (dev :5173, local :20080, test gateway /ui). A static redirect to one UI URL
+# would break the other environments.
 
 resource "authentik_stage_password" "agentgo_password" {
   name     = "AgentGo Password"

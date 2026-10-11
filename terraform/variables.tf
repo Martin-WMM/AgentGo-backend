@@ -37,6 +37,11 @@ variable "redirect_uris" {
       redirect_uri_type = "authorization"
     },
     {
+      url               = "http://localhost:20082/login/oauth2/code/authentik"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+    },
+    {
       url               = "http://localhost:5173"
       matching_mode     = "strict"
       redirect_uri_type = "logout"
@@ -48,6 +53,62 @@ variable "redirect_uris" {
     },
     {
       url               = "http://localhost:5173/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:20080"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:20080/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:20080/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    # TEST gateway (DEPLOY_HOST IP or DNS). Override in tfvars when the host changes.
+    {
+      url               = "http://124.174.118.184:28080/backend/login/oauth2/code/authentik"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/backend/login/oauth2/code/authentik"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+    },
+    {
+      url               = "http://124.174.118.184:28080/ui"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://124.174.118.184:28080/ui/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://124.174.118.184:28080/ui/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/ui"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/ui/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/ui/?signedOut=1"
       matching_mode     = "strict"
       redirect_uri_type = "logout"
     }
