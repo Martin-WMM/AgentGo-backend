@@ -118,3 +118,73 @@ class ModelServiceImplTest {
         val id = UUID.randomUUID()
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(modelRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(null)
+
+        assertFailsWith<ModelNotFoundException> { service.get(id) }
+        assertFailsWith<ModelNotFoundException> {
+            service.update(id, modelUpdateRequest("n", "p", ModelType.OTHER))
+        }
+        assertFailsWith<ModelNotFoundException> { service.delete(id) }
+    }
+
+    private fun modelCreateRequest(
+        name: String,
+        provider: String,
+        type: ModelType,
+        configuration: Map<String, Any?> = emptyMap(),
+        description: String? = null,
+    ) = ModelCreateRequest().apply {
+        this.name = name
+        this.provider = provider
+        this.type = type
+        this.configuration = configuration
+        this.description = description
+    }
+
+    private fun modelUpdateRequest(
+        name: String,
+        provider: String,
+        type: ModelType,
+        configuration: Map<String, Any?> = emptyMap(),
+        description: String? = null,
+    ) = ModelUpdateRequest().apply {
+        this.name = name
+        this.provider = provider
+        this.type = type
+        this.configuration = configuration
+        this.description = description
+    }
+
+    private fun sampleResponse(id: UUID, name: String, type: ModelType): ModelResponse =
+        ModelResponse(
+            id = id,
+            name = name,
+            provider = "openai",
+            type = type,
+            configuration = emptyMap(),
+            createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+            updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
+        )
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
+
+    private fun ModelEntity.copyWithId(id: UUID): ModelEntity =
+        ModelEntity(
+            id = id,
+            ownerUserId = ownerUserId,
+            name = name,
+            provider = provider,
+            type = type,
+            configuration = configuration,
+            description = description,
+            creator = creator,
+            createdAt = createdAt ?: Instant.parse("2026-01-01T00:00:00Z"),
+            updatedAt = updatedAt ?: Instant.parse("2026-01-01T00:00:00Z"),
+            updatedBy = updatedBy,
+        )
+}
