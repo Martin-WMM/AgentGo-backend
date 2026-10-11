@@ -19,6 +19,8 @@ Thumbs.db
 # Environment and secrets
 .env
 *.local
+local-deployment/.env
+local-deployment/.bootRun.env
 
 # Terraform
 terraform/.terraform/
@@ -27,3 +29,12 @@ terraform/*.tfstate.*
 terraform/crash.log
 terraform/*.tfvars
 !terraform/*.tfvars.example
+
+# Generated local Compose UI staging
+local-deployment/ui-dist/
+local-deployment/ui-nginx.conf
+
+local-deployment/agentgo-app.jar
+local-deployment/ui-dist/
+local-deployment/ui-nginx.conf
+

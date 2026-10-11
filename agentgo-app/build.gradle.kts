@@ -27,6 +27,23 @@ springBoot {
     buildInfo()
 }
 
+/**
+ * Loads local-deployment/.bootRun.env for host IDE / Gradle bootRun (dev).
+ * Compose "local" profile must not inherit these variables from the shell.
+ */
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    val envFile = rootProject.file("local-deployment/.bootRun.env")
+    if (envFile.exists()) {
+        envFile.readLines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+            .forEach { line ->
+                val idx = line.indexOf('=')
+                environment(line.substring(0, idx), line.substring(idx + 1))
+            }
+    }
+}
+
 kover {
     reports {
         filters {
