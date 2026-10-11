@@ -118,31 +118,3 @@ class ModelServiceImpl(
     private fun requireType(type: ModelType?): ModelType =
         type ?: throw InvalidModelRequestException("The model type is required.")
 
-    private fun requireText(value: String, fieldName: String): String {
-        val trimmed = value.trim()
-        if (trimmed.isEmpty()) {
-            throw InvalidModelRequestException("The model $fieldName must not be blank.")
-        }
-        if (trimmed.length > 255) {
-            throw InvalidModelRequestException("The model $fieldName must be at most 255 characters.")
-        }
-        return trimmed
-    }
-
-    private fun normalizeDescription(description: String?): String? {
-        val trimmed = description?.trim().orEmpty()
-        if (trimmed.isEmpty()) {
-            return null
-        }
-        if (trimmed.length > 2000) {
-            throw InvalidModelRequestException("The model description must be at most 2000 characters.")
-        }
-        return trimmed
-    }
-
-    private fun <T> read(action: () -> T): T =
-        readTransaction.execute { action() } ?: error("Model read transaction returned null")
-
-    private fun <T> write(action: () -> T): T =
-        writeTransaction.execute { action() } ?: error("Model write transaction returned null")
-}
