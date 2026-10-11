@@ -64,20 +64,18 @@ The build publishes exactly two executable Spring Boot Jars:
 The commons, core, DTO, and starter modules are internal library modules and must not be
 published as standalone release artifacts.
 
-For local container testing, use `local-deployments/docker-compose.yml`. It starts PostgreSQL
-and the `agentgo-app` image. Database changes must be made through versioned Flyway migrations
-in `db-migration`; keep `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments.
-
-The local Authentik identity center is defined separately in
-`local-deployment/docker-compose.yml`. It owns its own PostgreSQL volume and must not reuse the
-AgentGo application database. Keep Authentik credentials, client secrets, SMTP settings, and
-generated data in the ignored `.env` and Docker volumes. Do not copy credentials or data from
-other deployment repositories.
+For local container testing, use `local-deployment/docker-compose.yml`. It starts the AgentGo
+application PostgreSQL, optional `agentgo-app` image, Authentik identity center, and MinIO.
+Authentik uses its own PostgreSQL volume and must not reuse the AgentGo application database.
+Database schema changes must go through versioned Flyway migrations in `db-migration`; keep
+`SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments. Keep Authentik credentials, client
+secrets, SMTP settings, and generated data in the ignored `.env` and Docker volumes. Do not copy
+credentials or data from other deployment repositories.
 
 Start the local stack with:
 
 ```bash
-cd local-deployments
+cd local-deployment
 cp .env.example .env
 docker compose up --build -d
 ```

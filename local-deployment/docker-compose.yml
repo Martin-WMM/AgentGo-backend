@@ -19,10 +19,10 @@ services:
   agentgo-app:
     build:
       context: ..
-      dockerfile: local-deployments/Dockerfile.app
+      dockerfile: local-deployment/Dockerfile.app
     image: agentgo-app:local
     env_file:
-      - ../local-deployments/.env
+      - .env
     environment:
       DATABASE_URL: jdbc:postgresql://agentgo-postgresql:5432/${AGENTGO_POSTGRES_DB:-agentgo}
       DATABASE_USERNAME: ${AGENTGO_POSTGRES_USER:-agentgo}
