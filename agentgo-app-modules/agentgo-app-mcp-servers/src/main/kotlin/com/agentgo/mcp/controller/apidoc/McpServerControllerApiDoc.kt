@@ -118,31 +118,3 @@ interface McpServerControllerApiDoc {
         value = [
             ApiResponse(responseCode = "204", description = "MCP server deleted"),
             ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
-            ApiResponse(responseCode = "404", description = "MCP server not found (MCP-001)"),
-        ],
-    )
-    @DeleteMapping("/{id}")
-    fun delete(
-        @Parameter(description = "MCP server identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
-    ): ResponseEntity<Void>
-
-    @Operation(
-        summary = "Probe an MCP Streamable HTTP server",
-        description = "Runs initialize + notifications/initialized + tools/list against the configured " +
-            "endpoint, refreshes tools cache and status, and returns 9605 MCP-PROBED. Failures use MCP-006.",
-    )
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "MCP server probed", useReturnTypeSchema = true),
-            ApiResponse(responseCode = "401", description = "Authentication required"),
-            ApiResponse(responseCode = "404", description = "MCP server not found"),
-            ApiResponse(responseCode = "502", description = "Probe failed"),
-        ],
-    )
-    @PostMapping("/{id}/probe")
-    fun probe(
-        @Parameter(description = "MCP server identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
-    ): CommonHttpResponse<McpServerResponse>
-}
