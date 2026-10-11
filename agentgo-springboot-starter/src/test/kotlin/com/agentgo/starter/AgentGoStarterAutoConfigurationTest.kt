@@ -1,6 +1,6 @@
 package com.agentgo.starter
 
-import com.agentgo.starter.annotation.AgentGoLogApi
+import com.agentgo.commons.annotation.AgentGoLogApi
 import com.agentgo.starter.config.AgentGoStarterAutoConfiguration
 import com.agentgo.starter.properties.AgentGoOpenApiProperties
 import com.agentgo.starter.properties.AgentGoStarterProperties
@@ -40,6 +40,35 @@ class AgentGoStarterAutoConfigurationTest {
         assertEquals("https://example.com/terms", openApi.info.termsOfService)
         assertEquals("https://api.example.com", openApi.servers.first().url)
         assertEquals("Example API", openApi.servers.first().description)
+    }
+
+    @Test
+    fun `uses defaults when optional open api fields are blank`() {
+        val defaults = AgentGoOpenApiProperties()
+        val openApi = AgentGoStarterAutoConfiguration().agentGoOpenAPI(defaults)
+
+        assertEquals("AgentGo API", defaults.title)
+        assertEquals("AgentGo backend service API", defaults.description)
+        assertEquals("v1", defaults.version)
+        assertEquals("", defaults.termsOfServiceUrl)
+        assertEquals("Martin", defaults.contactName)
+        assertEquals("https://github.com/Martin-WMM/AgentGo-backend", defaults.contactUrl)
+        assertEquals("", defaults.contactEmail)
+        assertEquals("Apache License 2.0", defaults.licenseName)
+        assertEquals("https://www.apache.org/licenses/LICENSE-2.0", defaults.licenseUrl)
+        assertEquals("", defaults.serverUrl)
+        assertEquals("", defaults.serverDescription)
+        assertEquals(null, openApi.info.termsOfService)
+        assertTrue(openApi.servers.isNullOrEmpty())
+    }
+
+    @Test
+    fun `uses the server url when the server description is blank`() {
+        val openApi = AgentGoStarterAutoConfiguration().agentGoOpenAPI(
+            AgentGoOpenApiProperties(serverUrl = "https://api.example.com", serverDescription = " "),
+        )
+
+        assertEquals("https://api.example.com", openApi.servers.first().description)
     }
 
     @Test
