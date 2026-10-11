@@ -238,3 +238,110 @@ class PromptTemplateServiceImplTest {
         whenever(repository.existsByOwnerUserIdAndNameAndIdNot("ada", "Greeting", id))
             .thenReturn(true)
 
+        assertFailsWith<DuplicatePromptTemplateNameException> {
+            service.update(id, updateRequest("Greeting", PromptEngine.SIMPLE, "Hello"))
+        }
+        verify(repository, never()).save(any())
+    }
+
+    @Test
+    fun `preview renders unsaved content and render uses the stored template`() {
+        val id = UUID.randomUUID()
+        val entity = PromptTemplateEntity(
+            id = id,
+            ownerUserId = "ada",
+            engine = PromptEngine.SIMPLE,
+            content = "Hello {{ name }}",
+        )
+        whenever(resolver.requireUserId()).thenReturn("ada")
+        whenever(engine.render(PromptEngine.JINJA2, "Hi {{ name }}", mapOf("name" to "Ada"))).thenReturn("Hi Ada")
+        whenever(repository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
+        whenever(engine.render(PromptEngine.SIMPLE, "Hello {{ name }}", mapOf("name" to "Ada"))).thenReturn("Hello Ada")
+
+        val preview = service.preview(
+            previewRequest(PromptEngine.JINJA2, " Hi {{ name }} ", mapOf("name" to "Ada")),
+        )
+        val rendered = service.render(id, renderRequest(mapOf("name" to "Ada")))
+
+        assertEquals("Hi Ada", preview.output)
+        assertEquals("Hello Ada", rendered.output)
+        verify(engine).validate(PromptEngine.JINJA2, "Hi {{ name }}")
+    }
+
+    @Test
+    fun `render fails when the stored template is not owned by the caller`() {
+        val id = UUID.randomUUID()
+        whenever(resolver.requireUserId()).thenReturn("ada")
+        whenever(repository.findByIdAndOwnerUserId(id, "ada")).thenReturn(null)
+
+        assertFailsWith<PromptTemplateNotFoundException> {
+            service.render(id, renderRequest(mapOf("name" to "Ada")))
+        }
+        verify(engine, never()).render(any(), any(), any())
+    }
+
+    @Test
+    fun `preview rejects blank content`() {
+        whenever(resolver.requireUserId()).thenReturn("ada")
+
+        assertFailsWith<InvalidPromptTemplateRequestException> {
+            service.preview(previewRequest(PromptEngine.SIMPLE, "   ", emptyMap()))
+        }
+    }
+
+    private fun createRequest(
+        name: String,
+        engine: PromptEngine?,
+        content: String,
+        description: String? = null,
+    ) = PromptTemplateCreateRequest().apply {
+        this.name = name
+        this.engine = engine
+        this.content = content
+        this.description = description
+    }
+
+    private fun updateRequest(
+        name: String,
+        engine: PromptEngine?,
+        content: String,
+        description: String? = null,
+    ) = PromptTemplateUpdateRequest().apply {
+        this.name = name
+        this.engine = engine
+        this.content = content
+        this.description = description
+    }
+
+    private fun previewRequest(
+        engine: PromptEngine?,
+        content: String,
+        variables: Map<String, Any?>,
+    ) = PromptTemplatePreviewRequest().apply {
+        this.engine = engine
+        this.content = content
+        this.variables = variables
+    }
+
+    private fun renderRequest(variables: Map<String, Any?>) = PromptTemplateRenderRequest().apply {
+        this.variables = variables
+    }
+
+    private fun sampleResponse(id: UUID, name: String) = PromptTemplateResponse(
+        id = id,
+        name = name,
+        engine = PromptEngine.SIMPLE,
+        content = "Hello {{ name }}",
+        description = "hi",
+        createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+        updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
+    )
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
+}
