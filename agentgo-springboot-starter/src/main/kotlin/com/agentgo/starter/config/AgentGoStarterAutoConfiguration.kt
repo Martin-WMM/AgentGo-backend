@@ -1,6 +1,7 @@
 package com.agentgo.starter.config
 
 import com.agentgo.starter.AgentGoLogApiAspect
+import com.agentgo.starter.ValidationExceptionHandler
 import com.agentgo.starter.properties.AgentGoOpenApiProperties
 import com.agentgo.starter.properties.AgentGoStarterProperties
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -30,7 +31,7 @@ import java.time.Clock
  */
 @AutoConfiguration(before = [JacksonAutoConfiguration::class])
 @EnableConfigurationProperties(AgentGoStarterProperties::class, AgentGoOpenApiProperties::class)
-@Import(AgentGoLogApiAspect::class)
+@Import(AgentGoLogApiAspect::class, ValidationExceptionHandler::class)
 class AgentGoStarterAutoConfiguration {
     @Bean
     fun agentGoClock(): Clock = Clock.systemUTC()
