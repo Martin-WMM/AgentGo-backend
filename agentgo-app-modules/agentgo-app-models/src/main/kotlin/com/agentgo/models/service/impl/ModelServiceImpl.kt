@@ -13,10 +13,14 @@ import com.agentgo.models.security.AuthenticatedUserIdResolver
 import com.agentgo.models.service.ModelService
 import java.util.UUID
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 
 /**
  * Default [ModelService] implementation backed by JPA persistence.
+ *
+ * Each public operation opens its own programmatic transaction. Writes flush before
+ * mapping so JPA auditing timestamps are present on the returned model.
  *
  * @property modelRepository model persistence access
  * @property modelMapper entity/DTO mapper
@@ -27,75 +31,92 @@ class ModelServiceImpl(
     private val modelRepository: ModelRepository,
     private val modelMapper: ModelMapper,
     private val authenticatedUserIdResolver: AuthenticatedUserIdResolver,
+    transactionManager: PlatformTransactionManager,
 ) : ModelService {
-    @Transactional
+    private val writeTransaction = TransactionTemplate(transactionManager)
+    private val readTransaction = TransactionTemplate(transactionManager).apply {
+        isReadOnly = true
+    }
+
     override fun create(request: ModelCreateRequest): ModelResponse {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
         val normalized = normalizeCreate(request)
-        if (modelRepository.existsByOwnerUserIdAndName(ownerUserId, normalized.name)) {
-            throw DuplicateModelNameException()
+        return write {
+            if (modelRepository.existsByOwnerUserIdAndName(ownerUserId, normalized.name)) {
+                throw DuplicateModelNameException()
+            }
+            val saved = modelRepository.save(modelMapper.toEntity(ownerUserId, normalized))
+            modelRepository.flush()
+            modelMapper.toResponse(saved)
         }
-        val saved = modelRepository.save(modelMapper.toEntity(ownerUserId, normalized))
-        return modelMapper.toResponse(saved)
     }
 
-    @Transactional(readOnly = true)
     override fun get(id: UUID): ModelResponse {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
-        val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
-            ?: throw ModelNotFoundException()
-        return modelMapper.toResponse(entity)
+        return read {
+            val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
+                ?: throw ModelNotFoundException()
+            modelMapper.toResponse(entity)
+        }
     }
 
-    @Transactional(readOnly = true)
     override fun list(type: ModelType?): List<ModelResponse> {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
-        val entities = if (type == null) {
-            modelRepository.findByOwnerUserIdOrderByUpdatedAtDesc(ownerUserId)
-        } else {
-            modelRepository.findByOwnerUserIdAndTypeOrderByUpdatedAtDesc(ownerUserId, type)
+        return read {
+            val entities = if (type == null) {
+                modelRepository.findByOwnerUserIdOrderByUpdatedAtDesc(ownerUserId)
+            } else {
+                modelRepository.findByOwnerUserIdAndTypeOrderByUpdatedAtDesc(ownerUserId, type)
+            }
+            entities.map(modelMapper::toResponse)
         }
-        return entities.map(modelMapper::toResponse)
     }
 
-    @Transactional
     override fun update(id: UUID, request: ModelUpdateRequest): ModelResponse {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
-        val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
-            ?: throw ModelNotFoundException()
         val normalized = normalizeUpdate(request)
-        if (modelRepository.existsByOwnerUserIdAndNameAndIdNot(ownerUserId, normalized.name, id)) {
-            throw DuplicateModelNameException()
+        return write {
+            val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
+                ?: throw ModelNotFoundException()
+            if (modelRepository.existsByOwnerUserIdAndNameAndIdNot(ownerUserId, normalized.name, id)) {
+                throw DuplicateModelNameException()
+            }
+            modelMapper.applyUpdate(entity, normalized)
+            val saved = modelRepository.save(entity)
+            modelRepository.flush()
+            modelMapper.toResponse(saved)
         }
-        modelMapper.applyUpdate(entity, normalized)
-        return modelMapper.toResponse(modelRepository.save(entity))
     }
 
-    @Transactional
     override fun delete(id: UUID) {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
-        val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
-            ?: throw ModelNotFoundException()
-        modelRepository.delete(entity)
+        write {
+            val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
+                ?: throw ModelNotFoundException()
+            modelRepository.delete(entity)
+        }
     }
 
     private fun normalizeCreate(request: ModelCreateRequest): ModelCreateRequest =
-        ModelCreateRequest(
-            name = requireText(request.name, "name"),
-            provider = requireText(request.provider, "provider"),
-            type = request.type,
-            configuration = request.configuration,
-            description = normalizeDescription(request.description),
-        )
+        ModelCreateRequest().apply {
+            name = requireText(request.name, "name")
+            provider = requireText(request.provider, "provider")
+            type = requireType(request.type)
+            configuration = request.configuration
+            description = normalizeDescription(request.description)
+        }
 
     private fun normalizeUpdate(request: ModelUpdateRequest): ModelUpdateRequest =
-        ModelUpdateRequest(
-            name = requireText(request.name, "name"),
-            provider = requireText(request.provider, "provider"),
-            type = request.type,
-            configuration = request.configuration,
-            description = normalizeDescription(request.description),
-        )
+        ModelUpdateRequest().apply {
+            name = requireText(request.name, "name")
+            provider = requireText(request.provider, "provider")
+            type = requireType(request.type)
+            configuration = request.configuration
+            description = normalizeDescription(request.description)
+        }
+
+    private fun requireType(type: ModelType?): ModelType =
+        type ?: throw InvalidModelRequestException("The model type is required.")
 
     private fun requireText(value: String, fieldName: String): String {
         val trimmed = value.trim()
@@ -118,4 +139,10 @@ class ModelServiceImpl(
         }
         return trimmed
     }
+
+    private fun <T> read(action: () -> T): T =
+        readTransaction.execute { action() } ?: error("Model read transaction returned null")
+
+    private fun <T> write(action: () -> T): T =
+        writeTransaction.execute { action() } ?: error("Model write transaction returned null")
 }

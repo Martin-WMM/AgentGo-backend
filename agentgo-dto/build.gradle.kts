@@ -9,5 +9,7 @@ tasks.named<Jar>("jar") {
 }
 
 dependencies {
+    api(project(":agentgo-commons"))
     api("org.springdoc:springdoc-openapi-starter-common:${rootProject.extra["springdocVersion"]}")
+    api("jakarta.validation:jakarta.validation-api")
 }

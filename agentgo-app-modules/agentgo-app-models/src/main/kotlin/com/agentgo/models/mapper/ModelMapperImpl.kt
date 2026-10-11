@@ -28,7 +28,7 @@ class ModelMapperImpl : ModelMapper {
             ownerUserId = ownerUserId,
             name = request.name,
             provider = request.provider,
-            type = request.type,
+            type = checkNotNull(request.type) { "Model type must be normalized before mapping." },
             configuration = request.configuration,
             description = request.description,
         )
@@ -36,7 +36,7 @@ class ModelMapperImpl : ModelMapper {
     override fun applyUpdate(entity: ModelEntity, request: ModelUpdateRequest) {
         entity.name = request.name
         entity.provider = request.provider
-        entity.type = request.type
+        entity.type = checkNotNull(request.type) { "Model type must be normalized before mapping." }
         entity.configuration = request.configuration
         entity.description = request.description
     }

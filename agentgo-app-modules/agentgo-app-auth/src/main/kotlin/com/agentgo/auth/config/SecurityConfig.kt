@@ -84,6 +84,10 @@ class SecurityConfig(
                     "${ApiPaths.AUTH}/profile",
                     ApiPaths.V1_FILES_ANT,
                     ApiPaths.V1_MODELS_ANT,
+                    ApiPaths.V1_PROMPT_TEMPLATES_ANT,
+                    ApiPaths.V1_MCP_SERVERS_ANT,
+                    ApiPaths.V1_SETTINGS,
+                    ApiPaths.V1_WORKSPACES_ANT,
                 )
             }
             .authorizeHttpRequests { authorize ->

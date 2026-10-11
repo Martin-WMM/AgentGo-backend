@@ -16,13 +16,13 @@ class ModelMapperImplTest {
 
     @Test
     fun mapsCreateRequestToEntity() {
-        val request = ModelCreateRequest(
-            name = "gpt-4o-mini",
-            provider = "openai",
-            type = ModelType.LLM,
-            configuration = mapOf("model" to "gpt-4o-mini"),
-            description = "Chat model",
-        )
+        val request = ModelCreateRequest().apply {
+            name = "gpt-4o-mini"
+            provider = "openai"
+            type = ModelType.LLM
+            configuration = mapOf("model" to "gpt-4o-mini")
+            description = "Chat model"
+        }
 
         val entity = mapper.toEntity("ada", request)
 
@@ -53,13 +53,13 @@ class ModelMapperImplTest {
 
         mapper.applyUpdate(
             entity,
-            ModelUpdateRequest(
-                name = "embeddings",
-                provider = "ollama",
-                type = ModelType.EMBEDDING,
-                configuration = mapOf("model" to "nomic"),
-                description = null,
-            ),
+            ModelUpdateRequest().apply {
+                name = "embeddings"
+                provider = "ollama"
+                type = ModelType.EMBEDDING
+                configuration = mapOf("model" to "nomic")
+                description = null
+            },
         )
         val response = mapper.toResponse(entity)
 

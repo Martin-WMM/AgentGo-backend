@@ -1,12 +1,10 @@
-package com.agentgo.starter.annotation
+package com.agentgo.commons.annotation
 
 /**
- * Marks a controller API whose request and successful response should be logged.
+ * Marks a controller API whose request and successful response should be logged
+ * by the AgentGo starter logging aspect.
  *
  * When [name] is blank, the annotated method name is used.
- *
- * @author Martin M. W.
- * @version 0.1.0-SNAPSHOT
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)

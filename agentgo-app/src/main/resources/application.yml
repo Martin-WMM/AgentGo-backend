@@ -88,7 +88,8 @@ agentgo:
     authentik-browser-base-url: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:http://localhost:9000}
     authentik-application-slug: ${AGENTGO_AUTHENTIK_APPLICATION_SLUG:agentgo}
   file:
-    minio-endpoint: ${MINIO_ENDPOINT:http://localhost:9001}
+    # Prefer 127.0.0.1 on Windows: localhost can resolve to ::1 and hang while MinIO listens on IPv4.
+    minio-endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9001}
     minio-access-key: ${MINIO_ACCESS_KEY:minioadmin}
     minio-secret-key: ${MINIO_SECRET_KEY:local-minio-password-change-me}
     bucket-name: ${MINIO_BUCKET:agentgo-bucket}

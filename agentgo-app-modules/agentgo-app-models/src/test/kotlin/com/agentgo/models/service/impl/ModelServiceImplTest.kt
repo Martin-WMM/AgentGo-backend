@@ -22,19 +22,33 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.SimpleTransactionStatus
 
 class ModelServiceImplTest {
     private val modelRepository = mock<ModelRepository>()
     private val modelMapper = mock<ModelMapper>()
     private val authenticatedUserIdResolver = mock<AuthenticatedUserIdResolver>()
-    private val service = ModelServiceImpl(modelRepository, modelMapper, authenticatedUserIdResolver)
+    private val service = ModelServiceImpl(
+        modelRepository,
+        modelMapper,
+        authenticatedUserIdResolver,
+        PassThroughTransactionManager(),
+    )
 
     @Test
     fun createsModelForAuthenticatedOwner() {
-        val request = ModelCreateRequest("gpt-4o-mini", "openai", ModelType.LLM, mapOf("model" to "gpt-4o-mini"))
-        val entity = ModelEntity(ownerUserId = "ada", name = request.name, provider = request.provider, type = request.type)
+        val request = modelCreateRequest("gpt-4o-mini", "openai", ModelType.LLM, mapOf("model" to "gpt-4o-mini"))
+        val entity = ModelEntity(
+            ownerUserId = "ada",
+            name = request.name,
+            provider = request.provider,
+            type = checkNotNull(request.type),
+        )
         val saved = entity.copyWithId(UUID.randomUUID())
-        val response = sampleResponse(saved.id!!, request.name, request.type)
+        val response = sampleResponse(saved.id!!, request.name, checkNotNull(request.type))
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(modelRepository.existsByOwnerUserIdAndName("ada", "gpt-4o-mini")).thenReturn(false)
         whenever(modelMapper.toEntity("ada", request)).thenReturn(entity)
@@ -50,7 +64,7 @@ class ModelServiceImplTest {
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
 
         assertFailsWith<InvalidModelRequestException> {
-            service.create(ModelCreateRequest("  ", "openai", ModelType.LLM))
+            service.create(modelCreateRequest("  ", "openai", ModelType.LLM))
         }
         verify(modelRepository, never()).save(any())
     }
@@ -61,7 +75,7 @@ class ModelServiceImplTest {
         whenever(modelRepository.existsByOwnerUserIdAndName("ada", "gpt-4o-mini")).thenReturn(true)
 
         assertFailsWith<DuplicateModelNameException> {
-            service.create(ModelCreateRequest("gpt-4o-mini", "openai", ModelType.LLM))
+            service.create(modelCreateRequest("gpt-4o-mini", "openai", ModelType.LLM))
         }
     }
 
@@ -84,7 +98,7 @@ class ModelServiceImplTest {
     fun updatesAndDeletesOwnedModels() {
         val id = UUID.randomUUID()
         val entity = ModelEntity(id = id, ownerUserId = "ada", name = "old", type = ModelType.LLM)
-        val update = ModelUpdateRequest("new", "ollama", ModelType.EMBEDDING, mapOf("model" to "nomic"), "desc")
+        val update = modelUpdateRequest("new", "ollama", ModelType.EMBEDDING, mapOf("model" to "nomic"), "desc")
         val response = sampleResponse(id, "new", ModelType.EMBEDDING)
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(modelRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
@@ -107,9 +121,37 @@ class ModelServiceImplTest {
 
         assertFailsWith<ModelNotFoundException> { service.get(id) }
         assertFailsWith<ModelNotFoundException> {
-            service.update(id, ModelUpdateRequest("n", "p", ModelType.OTHER))
+            service.update(id, modelUpdateRequest("n", "p", ModelType.OTHER))
         }
         assertFailsWith<ModelNotFoundException> { service.delete(id) }
+    }
+
+    private fun modelCreateRequest(
+        name: String,
+        provider: String,
+        type: ModelType,
+        configuration: Map<String, Any?> = emptyMap(),
+        description: String? = null,
+    ) = ModelCreateRequest().apply {
+        this.name = name
+        this.provider = provider
+        this.type = type
+        this.configuration = configuration
+        this.description = description
+    }
+
+    private fun modelUpdateRequest(
+        name: String,
+        provider: String,
+        type: ModelType,
+        configuration: Map<String, Any?> = emptyMap(),
+        description: String? = null,
+    ) = ModelUpdateRequest().apply {
+        this.name = name
+        this.provider = provider
+        this.type = type
+        this.configuration = configuration
+        this.description = description
     }
 
     private fun sampleResponse(id: UUID, name: String, type: ModelType): ModelResponse =
@@ -122,6 +164,14 @@ class ModelServiceImplTest {
             createdAt = Instant.parse("2026-01-01T00:00:00Z"),
             updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
         )
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
 
     private fun ModelEntity.copyWithId(id: UUID): ModelEntity =
         ModelEntity(

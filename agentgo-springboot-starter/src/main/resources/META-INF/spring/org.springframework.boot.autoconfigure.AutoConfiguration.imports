@@ -1,1 +1,2 @@
 com.agentgo.starter.config.AgentGoStarterAutoConfiguration
+com.agentgo.starter.config.AgentGoI18nConfiguration

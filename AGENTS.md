@@ -23,6 +23,8 @@ module-local version literals when a version is already defined there.
 - `agentgo-app-modules:agentgo-app-auth`: Authentik OIDC login, session, and profile capabilities.
 - `agentgo-app-modules:agentgo-app-file`: Workspace and avatar file metadata with MinIO storage.
 - `agentgo-app-modules:agentgo-app-models`: Authenticated user-owned AI model configuration CRUD.
+- `agentgo-app-modules:agentgo-app-mcp-servers`: Authenticated user-owned MCP Streamable HTTP server CRUD and probe.
+- `agentgo-app-modules:agentgo-app-settings`: Per-user system settings that configure AgentGo clients.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
 - `agentgo-commons`: Shared utility types, helpers, and the standardized HTTP, pagination, and SSE response DTOs.
@@ -30,6 +32,8 @@ module-local version literals when a version is already defined there.
 - `agentgo-dto`: Cross-module business data transfer objects and protocol models. DTOs shared
   between modules belong here, except for the standardized HTTP, pagination, and SSE response DTOs.
 - `agentgo-dto:agentgo-dto-models`: Request and response DTOs for user-owned model management.
+- `agentgo-dto:agentgo-dto-mcp`: Request and response DTOs for user-owned MCP Streamable HTTP servers.
+- `agentgo-dto:agentgo-dto-settings`: Request and response DTOs for per-user system settings.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
 - `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
@@ -40,9 +44,10 @@ Avoid introducing application-specific dependencies into `agentgo-dto` or `agent
 
 ## Build and test
 
-The repository's CI uses Gradle 9.1 with JDK 25. The Gradle Wrapper may exist in a local
-workspace but is not part of the tracked project contract; use the wrapper when available,
-otherwise use Gradle 9.1 or newer:
+The repository uses JDK 25 and Gradle 9.1 or newer. Gradle 9.0.0 cannot run on JDK 25; its
+maximum Gradle JVM is 24. Do not point the IDE Gradle JVM at Java 24 to work around that.
+Keep the checked-in wrapper on a release that can run on JDK 25. The wrapper is currently
+Gradle 9.8.1. CI uses this wrapper through `gradle/actions/setup-gradle`.
 
 ```bash
 ./gradlew test koverVerify
@@ -55,6 +60,50 @@ gradle build
 
 The build must maintain at least 85% code coverage. Every module test must use the JUnit
 Platform and should cover new behavior and public protocol changes.
+
+### Unit testing (Controller / Service / DAO)
+
+For each capability that exposes HTTP APIs and persistence, write **separate, detailed unit
+tests for all three layers**. Do not collapse controller, service, and data-access coverage
+into a single mixed test class.
+
+| Layer | Typical type under test | Test style | What to cover |
+| --- | --- | --- | --- |
+| **Controller** | `XxxController`, exception handlers that map domain errors to HTTP envelopes | Pure unit tests: mock the service (and shared helpers such as `AgentGoMessages`); assert response codes, `responseType`, localized `message`, HTTP status, and that the service is invoked with the expected arguments | Success envelopes for create/get/list/update; delete status (for example `204`); i18n message selection via `LocaleContextHolder`; exception-handler mapping to `CommonHttpResponse` |
+| **Service** | `XxxServiceImpl` | Pure unit tests: mock repositories, mappers, and collaborators; authenticate through `SecurityContextHolder` when ownership or principal is required | Happy paths; duplicate/conflict rules; not-found; empty-vs-non-empty delete guards; unauthenticated/unauthorized paths; verify persistence side effects with Mockito (`save` / `delete` called or never called) |
+| **DAO / data access** | Spring Data `XxxRepository` (and any dedicated DAO wrappers) | Slice tests such as `@DataJpaTest` with an embedded database (H2 in PostgreSQL mode is acceptable for repository unit tests); import JPA auditing config when entities use audit fields; disable Flyway in the test profile and use `ddl-auto=create-drop` for the slice only | Query methods used by the service (`findBy…`, `existsBy…`, ordering); owner scoping; unique-name checks that ignore the current id; save/audit field population; delete removes the row |
+
+Rules:
+
+- Place tests next to the production package under `src/test/kotlin` (for example
+  `…/controller/XxxControllerTest`, `…/service/impl/XxxServiceImplTest`,
+  `…/repository/XxxRepositoryTest`).
+- Controllers must not be tested by calling repositories; services must not be tested through
+  the HTTP stack; repository tests must not mock away the persistence queries under test.
+- When a new endpoint, business rule, or repository query is added or changed, update the
+  matching layer’s tests in the same change set.
+- Shared starter handlers (validation, i18n) keep their own focused unit tests in
+  `agentgo-springboot-starter` (or the owning module); do not duplicate those assertions inside
+  every feature controller test.
+
+#### Kotlin test method names
+
+Define every unit test method name with Kotlin **backtick identifiers** so the name reads as a
+short English sentence describing the behavior. Prefer this form over camelCase method names:
+
+```kotlin
+@Test
+fun `create wraps service result with created response code and english message`() { … }
+
+@Test
+fun `create rejects duplicate workspace name for same owner`() { … }
+
+@Test
+fun `findByIdAndOwnerUserId returns only matching owner row`() { … }
+```
+
+Do not use vague names such as `test1`, `works`, or bare camelCase like `createsWorkspace`.
+Keep names stable and specific to the assertion; one primary behavior per test method.
 
 The build publishes exactly two executable Spring Boot Jars:
 
@@ -89,6 +138,19 @@ data is intentional.
 
 - Use Kotlin for new application and library code.
 - Use constructor injection for Spring dependencies.
+- Use programmatic transactions. Service implementations must open each transaction with
+  `TransactionTemplate` or `PlatformTransactionManager` at the call site that owns the unit
+  of work. Do not use declarative transactions: no `@Transactional` on classes or methods,
+  including `readOnly`, `rollbackFor`, and other attributes. Set propagation and the
+  read-only flag in that programmatic boundary so the transaction stays visible next to the
+  work it covers. When editing a service that still uses `@Transactional`, convert that
+  service in the same change.
+- Define every thread pool explicitly. Do not submit work to `ForkJoinPool.commonPool()`,
+  an unnamed `Executors` factory, `@Async` without an executor name, or a framework default
+  task executor. Register each pool as a Spring bean in the owning module's `config`
+  package. Give it a thread-name prefix that identifies the module and purpose, such as
+  `agentgo-file-upload-`. Set the pool size, queue capacity, and rejection policy on that
+  bean; do not leave them to framework defaults.
 - Follow the official Kotlin coding conventions: use four-space indentation, `PascalCase`
   for classes and interfaces, `camelCase` for functions, properties, and parameters, and
   `UPPER_SNAKE_CASE` only for true compile-time constants. Prefer immutable `val` values,
@@ -123,6 +185,9 @@ data is intentional.
     business rules in the implementation rather than in controllers or repositories.
   - Repositories must be responsible for persistence access only. Controllers must delegate
     to services and must not access repositories directly.
+  - Cover Controller, Service, and Repository (DAO) with separate detailed unit tests, and
+    name each test method with Kotlin backtick sentence names. See
+    [Unit testing (Controller / Service / DAO)](#unit-testing-controller--service--dao).
 - Keep Spring configuration classes in a module's `config` package and configuration-properties
   classes in its sibling `properties` package. Do not place `XxxProperties` beside `XxxConfig`.
 - `agentgo-dto` is organized into focused DTO modules. Define request, business response, and

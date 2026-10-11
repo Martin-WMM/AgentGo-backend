@@ -4,8 +4,10 @@ import com.agentgo.auth.properties.AuthProperties
 import com.agentgo.dto.auth.ProfileUpdateRequest
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import java.net.http.HttpClient
 import java.util.UUID
 import org.springframework.http.MediaType
+import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientResponseException
@@ -16,8 +18,17 @@ class AuthentikProfileClientImpl(
     private val authProperties: AuthProperties,
 ) : AuthentikProfileClient {
     private val json = ObjectMapper()
+    // Authentik (Hypercorn/uvicorn) rejects some Java HTTP/2 bodies with
+    // "Invalid HTTP request received." Force HTTP/1.1 like the OAuth token client.
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(authProperties.authentikApiBaseUrl.trimEnd('/'))
+        .requestFactory(
+            JdkClientHttpRequestFactory(
+                HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build(),
+            ),
+        )
         .defaultHeaders { headers ->
             headers.accept = listOf(MediaType.APPLICATION_JSON)
             headers.setBearerAuth(authProperties.authentikApiToken)
@@ -36,16 +47,19 @@ class AuthentikProfileClientImpl(
 
     override fun update(user: AuthentikUserResponse, request: ProfileUpdateRequest): AuthentikUserResponse {
         requireConfigured()
+        // Authentik's Core user `avatar` field is not a writable profile URL. AgentGo-hosted
+        // avatars stay in MinIO / tbl_user_profile; only identity fields sync here.
+        val payload = linkedMapOf<String, Any>(
+            "name" to request.displayName.trim(),
+        )
+        request.email?.trim()?.ifBlank { null }?.let { payload["email"] = it }
+        // Serialize explicitly so Content-Length is set; chunked HTTP/1.1 bodies have also
+        // triggered Hypercorn parse failures against Authentik in practice.
+        val requestBody = json.writeValueAsString(payload)
         val body = restClient.patch()
             .uri("/api/v3/core/users/{id}/", user.pk)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(
-                mapOf(
-                    "name" to request.displayName.trim(),
-                    "email" to request.email?.trim()?.ifBlank { null },
-                    "avatar" to request.avatarUrl?.trim()?.ifBlank { null },
-                ),
-            )
+            .body(requestBody)
             .retrieve()
             .body(String::class.java)
             ?: throw IllegalStateException("Authentik returned an empty profile response")
