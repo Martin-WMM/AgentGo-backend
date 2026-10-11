@@ -23,6 +23,8 @@ module-local version literals when a version is already defined there.
 - `agentgo-app-modules:agentgo-app-auth`: Authentik OIDC login, session, and profile capabilities.
 - `agentgo-app-modules:agentgo-app-file`: Workspace and avatar file metadata with MinIO storage.
 - `agentgo-app-modules:agentgo-app-models`: Authenticated user-owned AI model configuration CRUD.
+- `agentgo-app-modules:agentgo-app-mcp-servers`: Authenticated user-owned MCP Streamable HTTP server CRUD and probe.
+- `agentgo-app-modules:agentgo-app-settings`: Per-user system settings that configure AgentGo clients.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
 - `agentgo-commons`: Shared utility types, helpers, and the standardized HTTP, pagination, and SSE response DTOs.
@@ -30,6 +32,8 @@ module-local version literals when a version is already defined there.
 - `agentgo-dto`: Cross-module business data transfer objects and protocol models. DTOs shared
   between modules belong here, except for the standardized HTTP, pagination, and SSE response DTOs.
 - `agentgo-dto:agentgo-dto-models`: Request and response DTOs for user-owned model management.
+- `agentgo-dto:agentgo-dto-mcp`: Request and response DTOs for user-owned MCP Streamable HTTP servers.
+- `agentgo-dto:agentgo-dto-settings`: Request and response DTOs for per-user system settings.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
 - `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
@@ -40,9 +44,10 @@ Avoid introducing application-specific dependencies into `agentgo-dto` or `agent
 
 ## Build and test
 
-The repository's CI uses Gradle 9.1 with JDK 25. The Gradle Wrapper may exist in a local
-workspace but is not part of the tracked project contract; use the wrapper when available,
-otherwise use Gradle 9.1 or newer:
+The repository uses JDK 25 and Gradle 9.1 or newer. Gradle 9.0.0 cannot run on JDK 25; its
+maximum Gradle JVM is 24. Do not point the IDE Gradle JVM at Java 24 to work around that.
+Keep the checked-in wrapper on a release that can run on JDK 25. The wrapper is currently
+Gradle 9.8.1. CI uses this wrapper through `gradle/actions/setup-gradle`.
 
 ```bash
 ./gradlew test koverVerify
@@ -53,131 +58,6 @@ gradle test koverVerify
 gradle build
 ```
 
-The build must maintain at least 85% code coverage. Every module test must use the JUnit
-Platform and should cover new behavior and public protocol changes.
-
-The build publishes exactly two executable Spring Boot Jars:
-
-- `agentgo-app/build/libs/agentgo-app-*.jar`
-- `agentgo-cli/build/libs/agentgo-cli-*.jar`
-
-The commons, core, DTO, and starter modules are internal library modules and must not be
-published as standalone release artifacts.
-
-### Environments (dev / local / test)
-
-Follow the workspace `AGENTS.md` promotion order: **dev → local → git/PR → test**.
-
-| Env | How to run | Health / UI checks |
-| --- | --- | --- |
-| **dev** | Infra: `cd local-deployment && docker compose up -d` (no `--profile local`). App: copy `.bootRun.env.example` → `.bootRun.env`, then `./gradlew :agentgo-app:bootRun`. UI: Vite `:5173` with backend `http://localhost:8080`. | `curl http://localhost:8080/actuator/health` |
-| **local** | `cd local-deployment && cp .env.example .env` then `docker compose --profile local up --build -d` (UI `:20080`, app `:20082`). | `curl http://localhost:20082/actuator/health` and open `http://localhost:20080` |
-| **test** | GitHub Actions **Deployment TEST** (`workflow_dispatch` on `release/*`) SSHs to the TEST host and updates `$DEPLOY_PATH` Compose. Gateway `:28080` (`/ui`, `/backend`). | Verify login/logout on `http://{DEPLOY_HOST}:28080/ui` |
-
-`local-deployment/docker-compose.yml` always can start shared infra (AgentGo Postgres `:5433`, Authentik `:9000`, MinIO). Services `agentgo-app`, `agentgo-ui`, and `authentik-oidc` require `--profile local`. Authentik uses its own PostgreSQL volume and must not reuse the AgentGo application database. Local Compose routes server-side OIDC token/JWKS through `authentik-oidc` so ID token `iss` is `http://localhost:9000/...` and RP-initiated logout `id_token_hint` validates.
-
-Database schema changes must go through versioned Flyway migrations in `db-migration`; keep
-`SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments. Keep Authentik credentials, client
-secrets, SMTP settings, and generated data in the ignored `.env` / `.bootRun.env` and Docker volumes.
-Do not copy credentials or data from other deployment repositories. Never commit `.env` or `.bootRun.env`.
-
-Use `docker compose --profile local logs -f agentgo-app` when diagnosing local startup failures. Stop with
-`docker compose --profile local down`; use `docker compose down -v` only when removing local database
-data is intentional.
-
-## Coding conventions
-
-- Use Kotlin for new application and library code.
-- Use constructor injection for Spring dependencies.
-- Follow the official Kotlin coding conventions: use four-space indentation, `PascalCase`
-  for classes and interfaces, `camelCase` for functions, properties, and parameters, and
-  `UPPER_SNAKE_CASE` only for true compile-time constants. Prefer immutable `val` values,
-  expression bodies where they improve readability, null-safe Kotlin types instead of
-  platform-type workarounds, and standard-library collection operations over avoidable
-  mutable state. Keep functions small and single-purpose, avoid unnecessary `!!`, and use
-  sealed types or explicit result types when a finite state or failure model must be
-  represented.
-- Keep Kotlin imports explicit and organized by IDE/Kotlin formatter defaults. Do not use
-  wildcard imports. Add KDoc to public classes, interfaces, functions, and properties when
-  their behavior or contract is not self-evident; use `@param`, `@return`, and `@throws`
-  where they add useful contract information.
-- Keep exactly one top-level Kotlin declaration per source file. Each `class`, `data class`,
-  `sealed class`, `enum class`, `interface`, `object`, and `typealias` must have its own file
-  named after the declaration, including test declarations where practical.
-- Keep Spring components focused and use constructor injection. Prefer data classes for
-  immutable value objects and request/response models, and do not expose mutable collections
-  from public APIs unless mutation is part of the contract.
-- Every module below `agentgo-app-modules` must be named `agentgo-app-<module-name>` using
-  lowercase kebab-case. The Gradle project path, module directory, and published artifact
-  name must follow the same convention.
-- Organize HTTP capabilities with an explicit Controller, Service, and Repository structure:
-  - Each `XxxController` must have a matching `XxxControllerApiDoc` interface under the
-    sibling `controller.apidoc` package. The API-doc
-    type is an interface implemented by the controller and contains the Springdoc/Swagger
-    contract, including tags, endpoint summaries/descriptions, parameters, request and
-    response schemas, and relevant HTTP responses. Keep endpoint mappings and business logic
-    out of the API-doc interface.
-  - Each service must be declared as an `XxxService` interface and implemented by exactly
-    one `XxxServiceImpl` class unless a deliberate alternative is documented. Put the
-    service contract and usage expectations in KDoc on the interface; keep orchestration and
-    business rules in the implementation rather than in controllers or repositories.
-  - Repositories must be responsible for persistence access only. Controllers must delegate
-    to services and must not access repositories directly.
-- Keep Spring configuration classes in a module's `config` package and configuration-properties
-  classes in its sibling `properties` package. Do not place `XxxProperties` beside `XxxConfig`.
-- `agentgo-dto` is organized into focused DTO modules. Define request, business response, and
-  protocol data models there when they cross module boundaries. Every externally visible DTO
-  field and model must have a useful Swagger/OpenAPI description (for example with `@Schema`),
-  including requiredness, format, examples, and allowed values where applicable. DTOs must remain
-  free of Spring service logic and persistence annotations.
-- PostgreSQL is the database of record. For each persisted model, define the JPA `Entity`
-  first, then define its repository interface. A repository must extend all of
-  `JpaRepository<Entity, Id>`, `JpaSpecificationExecutor<Entity>`, and
-  `QueryByExampleExecutor<Entity>` as appropriate for the entity. Keep entity mappings,
-  identifiers, nullability, indexes, and column constraints aligned with the corresponding
-  Flyway migration; use `ddl-auto=validate` and never rely on Hibernate to create or update
-  production schema.
-- Every JPA entity must contain `creator`, `createdAt`, `updatedAt`, and `updatedBy` audit
-  fields. Use Spring Data JPA auditing (`@CreatedBy`, `@CreatedDate`, `@LastModifiedDate`,
-  and `@LastModifiedBy`) with a configured `AuditorAware`; do not manage these timestamps
-  manually in entity lifecycle callbacks.
-- `agentgo-commons` provides shared data formats, value objects, exceptions, general utilities,
-  and the standard transport response contracts. Keep these types framework-agnostic where
-  possible; do not place application controllers, Spring configuration, or persistence entities
-  there. Maintain the shared code-to-exception registry in Commons when adding a new externally
-  visible error code; error codes must be stable and must not be silently reused.
-- `agentgo-springboot-starter` provides shared Spring Boot infrastructure and foundational
-  auto-configuration. It must expose common beans such as the project `ObjectMapper`, define
-  `LogAspect` to log controller/service input and output parameters with appropriate
-  redaction and without leaking secrets, and provide the Springdoc OpenAPI integration used
-  by the application. Keep starter configuration reusable and avoid application-specific
-  business logic in this module.
-- Keep DTOs stable, serialization-friendly, and free of Spring or persistence concerns.
-- All HTTP responses must use `com.agentgo.commons.dto.http.response.CommonHttpResponse<T>`,
-  all SSE events must use `com.agentgo.commons.dto.http.response.CommonEventResponse<E>`, and
-  all paginated responses must use `com.agentgo.commons.dto.http.response.PageResponse<T>`.
-  Paginated query inputs must use `com.agentgo.commons.dto.http.request.PageRequest`, with
-  `page` starting at one and `SortOrder` limited to `ASC` or `DESC`. Do not introduce
-  alternative HTTP response envelopes, SSE event payloads, pagination request/response DTOs,
-  or sorting-direction enums.
-- In `CommonHttpResponse`, `code` is a stable integer system or business code (for example,
-  `2001`), never an HTTP status code. `responseType` is its corresponding stable string code
-  (for example, `FILE-001`). Set HTTP status through the HTTP response status line; use `error`
-  for the corresponding
-  `ErrorResponseCodeRegistry` description when `success` is `false`.
-- Register every code in the appropriate `dto.http.response.status.success` or
-  `dto.http.response.status.error` `XxxResponseCodeRegistry` before using it in a response.
-  Use `BaseResponseCodeRegistry.SUCCESS` only when no distinct successful business state needs
-  to be exposed.
-- Keep response-code metadata under `com.agentgo.commons.dto.http.response.status`. Place
-  successful outcomes in its `success` package and failures in its `error` package. Split code
-  definitions by business domain into `XxxResponseCodeRegistry` types (for example,
-  `FileResponseCodeRegistry` and `AuthResponseCodeRegistry`); do not add unrelated codes to a
-  base or aggregate registry. `ErrorResponseCodeRegistry` may aggregate error registries only
-  for lookup and must not define domain-specific codes itself. Each registered code must define
-  its meaning, category, and safe example message through `ResponseCodeDescription`.
-- Maintain the canonical integer `code` to string `responseType` correspondence in
-  `ResponseCodeRegistry.responseTypesByCode`. Every entry must resolve to a registered domain
   response type and must never be reused for a different outcome.
 - For a dedicated module exception class with one fixed error status, register its
   `ExceptionClass → (code, responseType)` mapping with
