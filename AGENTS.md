@@ -38,121 +38,163 @@ module-local version literals when a version is already defined there.
   and shared infrastructure configuration.
 - `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
 
-  base or aggregate registry. `ErrorResponseCodeRegistry` may aggregate error registries only
-  for lookup and must not define domain-specific codes itself. Each registered code must define
-  its meaning, category, and safe example message through `ResponseCodeDescription`.
-- Maintain the canonical integer `code` to string `responseType` correspondence in
-  `ResponseCodeRegistry.responseTypesByCode`. Every entry must resolve to a registered domain
-  response type and must never be reused for a different outcome.
-- For a dedicated module exception class with one fixed error status, register its
-  `ExceptionClass → (code, responseType)` mapping with
-  `ExceptionResponseCodeRegistry.register(...)` during module initialization. The registry
-  rejects unregistered or mismatched Code pairs. Exceptions that intentionally carry different
-  statuses per instance must expose their registered `code` and `responseType` explicitly.
-- Use Actuator for health and operational endpoints; do not add a custom health controller.
-- Keep application capability dependencies in `agentgo-app-modules`; `agentgo-app` should
-  compose those starters rather than re-declaring their infrastructure dependencies.
-- Add database changes only as new Flyway migrations under
-  `db-migration/src/main/resources/db/migration/` using `V<version>__<description>.sql`.
-- Never edit a migration that has been applied to a shared environment; create a new version.
-- Document externally visible API changes in `README.md` and `CHANGELOG.md` when appropriate.
-- Never commit secrets, credentials, tokens, private keys, or production data.
-- Keep changes focused and preserve unrelated user work.
+Keep dependencies flowing toward shared modules. `agentgo-app` should compose capabilities
+through `agentgo-app-modules` rather than declaring their infrastructure dependencies directly.
+Avoid introducing application-specific dependencies into `agentgo-dto` or `agentgo-commons`.
 
-## Version and dependency changes
+## Build and test
 
-When adding or upgrading a dependency:
+The repository uses JDK 25 and Gradle 9.1 or newer. Gradle 9.0.0 cannot run on JDK 25; its
+maximum Gradle JVM is 24. Do not point the IDE Gradle JVM at Java 24 to work around that.
+Keep the checked-in wrapper on a release that can run on JDK 25. The wrapper is currently
+Gradle 9.8.1. CI uses this wrapper through `gradle/actions/setup-gradle`.
 
-1. Define or update its version in the root `build.gradle.kts`.
-2. Use versionless dependency declarations in module build files when dependency management
-   provides the version.
-3. Update documentation or `CHANGELOG.md` if the change affects users or release artifacts.
-4. Run tests, coverage verification, and the full build.
+```bash
+./gradlew test koverVerify
+./gradlew build
 
-## Git and pull request workflow
-
-The intended flow is:
-
-```text
-main -> release/* -> feature/* or fix/* -> PR -> release/* -> PR -> main
+# Or, when the local wrapper is unavailable:
+gradle test koverVerify
+gradle build
 ```
 
-- `main` and `release/*` are protected and must not receive direct commits.
-- Pull requests must pass Merge CI, Commit Review, Dependency Review, and Review Policy.
-- Pull requests created by the repository owner may pass Review Policy automatically.
-- Pull requests created by other contributors require an approval from a reviewer other than
-  the author.
-- Use the repository PR template and complete every applicable section.
-- Use the issue templates for bug reports and feature requests.
-- Keep the PR description in English and document release impact and validation results.
+The build must maintain at least 85% code coverage. Every module test must use the JUnit
+Platform and should cover new behavior and public protocol changes.
 
-Commit messages must use the format:
+### Unit testing (Controller / Service / DAO)
 
-```text
-<emoji><type>: <message>
+For each capability that exposes HTTP APIs and persistence, write **separate, detailed unit
+tests for all three layers**. Do not collapse controller, service, and data-access coverage
+into a single mixed test class.
+
+| Layer | Typical type under test | Test style | What to cover |
+| --- | --- | --- | --- |
+| **Controller** | `XxxController`, exception handlers that map domain errors to HTTP envelopes | Pure unit tests: mock the service (and shared helpers such as `AgentGoMessages`); assert response codes, `responseType`, localized `message`, HTTP status, and that the service is invoked with the expected arguments | Success envelopes for create/get/list/update; delete status (for example `204`); i18n message selection via `LocaleContextHolder`; exception-handler mapping to `CommonHttpResponse` |
+| **Service** | `XxxServiceImpl` | Pure unit tests: mock repositories, mappers, and collaborators; authenticate through `SecurityContextHolder` when ownership or principal is required | Happy paths; duplicate/conflict rules; not-found; empty-vs-non-empty delete guards; unauthenticated/unauthorized paths; verify persistence side effects with Mockito (`save` / `delete` called or never called) |
+| **DAO / data access** | Spring Data `XxxRepository` (and any dedicated DAO wrappers) | Slice tests such as `@DataJpaTest` with an embedded database (H2 in PostgreSQL mode is acceptable for repository unit tests); import JPA auditing config when entities use audit fields; disable Flyway in the test profile and use `ddl-auto=create-drop` for the slice only | Query methods used by the service (`findBy…`, `existsBy…`, ordering); owner scoping; unique-name checks that ignore the current id; save/audit field population; delete removes the row |
+
+Rules:
+
+- Place tests next to the production package under `src/test/kotlin` (for example
+  `…/controller/XxxControllerTest`, `…/service/impl/XxxServiceImplTest`,
+  `…/repository/XxxRepositoryTest`).
+- Controllers must not be tested by calling repositories; services must not be tested through
+  the HTTP stack; repository tests must not mock away the persistence queries under test.
+- When a new endpoint, business rule, or repository query is added or changed, update the
+  matching layer’s tests in the same change set.
+- Shared starter handlers (validation, i18n) keep their own focused unit tests in
+  `agentgo-springboot-starter` (or the owning module); do not duplicate those assertions inside
+  every feature controller test.
+
+#### Kotlin test method names
+
+Define every unit test method name with Kotlin **backtick identifiers** so the name reads as a
+short English sentence describing the behavior. Prefer this form over camelCase method names:
+
+```kotlin
+@Test
+fun `create wraps service result with created response code and english message`() { … }
+
+@Test
+fun `create rejects duplicate workspace name for same owner`() { … }
+
+@Test
+fun `findByIdAndOwnerUserId returns only matching owner row`() { … }
 ```
 
-Each commit must change fewer than 300 lines. Examples:
+Do not use vague names such as `test1`, `works`, or bare camelCase like `createsWorkspace`.
+Keep names stable and specific to the assertion; one primary behavior per test method.
 
-```text
-✨feat: add agent workflow endpoint
-🐛fix: handle missing request identifier
-📝docs: update release instructions
-```
+The build publishes exactly two executable Spring Boot Jars:
 
-## Security and quality
+- `agentgo-app/build/libs/agentgo-app-*.jar`
+- `agentgo-cli/build/libs/agentgo-cli-*.jar`
 
-Security-sensitive changes require extra care and must not weaken repository protections.
-The repository uses security advisories, secret scanning, dependency review, CodeQL, and
-private vulnerability reporting. Report vulnerabilities through the repository security
-advisory process rather than opening a public issue.
+The commons, core, DTO, and starter modules are internal library modules and must not be
+published as standalone release artifacts.
 
-Before handoff, verify:
+### Environments (dev / local / test)
 
-- `git diff --check` passes.
-- Tests and `koverVerify` pass.
-- `gradle build` succeeds.
-- Only the two intended executable Jars are release artifacts.
-- Documentation and changelog entries are updated when required.
-- The working tree contains only intentional changes.
+Follow the workspace `AGENTS.md` promotion order: **dev → local → git/PR → test**.
 
-## Branch governance and AgentGo Project
+| Env | How to run | Health / UI checks |
+| --- | --- | --- |
+| **dev** | Infra: `cd local-deployment && docker compose up -d` (no `--profile local`). App: copy `.bootRun.env.example` → `.bootRun.env`, then `./gradlew :agentgo-app:bootRun`. UI: Vite `:5173` with backend `http://localhost:8080`. | `curl http://localhost:8080/actuator/health` |
+| **local** | `cd local-deployment && cp .env.example .env` then `docker compose --profile local up --build -d` (UI `:20080`, app `:20082`). | `curl http://localhost:20082/actuator/health` and open `http://localhost:20080` |
+| **test** | GitHub Actions **Deployment TEST** (`workflow_dispatch` on `release/*`) SSHs to the TEST host and updates `$DEPLOY_PATH` Compose. Gateway `:28080` (`/ui`, `/backend`). | Verify login/logout on `http://{DEPLOY_HOST}:28080/ui` |
 
-All branch planning uses [AgentGo GitHub Project #2](https://github.com/users/Martin-WMM/projects/2).
-This repository is linked to that shared Project; do not create a separate planning board.
+`local-deployment/docker-compose.yml` always can start shared infra (AgentGo Postgres `:5433`, Authentik `:9000`, MinIO). Services `agentgo-app`, `agentgo-ui`, and `authentik-oidc` require `--profile local`. Authentik uses its own PostgreSQL volume and must not reuse the AgentGo application database. Local Compose routes server-side OIDC token/JWKS through `authentik-oidc` so ID token `iss` is `http://localhost:9000/...` and RP-initiated logout `id_token_hint` validates.
 
-```text
-main -> release/<name> -> feature/<issue-number>-<name> or fix/<issue-number>-<name>
-     feature/fix -> PR -> their source release/<name> -> PR -> main
-main -> hotfix/<issue-number>-<name> -> PR -> main
-```
+Database schema changes must go through versioned Flyway migrations in `db-migration`; keep
+`SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments. Keep Authentik credentials, client
+secrets, SMTP settings, and generated data in the ignored `.env` / `.bootRun.env` and Docker volumes.
+Do not copy credentials or data from other deployment repositories. Never commit `.env` or `.bootRun.env`.
 
-- Create `release/*` and `hotfix/*` from an up-to-date `origin/main`.
-- Create `feature/*` and `fix/*` from the intended, up-to-date `origin/release/*`, never directly from `main`.
-- A PR into `release/*` must come from `feature/*` or `fix/*` created for that release.
-- A PR into `main` must come from `release/*` or `hotfix/*`; feature/fix branches cannot target `main`.
-- `main` and every `release/*` prohibit deletion, force pushes, and direct pushes. Change them only through PRs with all required checks passing.
-- Retain `release/*` permanently, including after promotion to `main`. Never remove or bypass their deletion protection for cleanup.
-- Disable repository-wide automatic head-branch deletion. Cleanup may delete only merged `feature/*`, `fix/*`, and `hotfix/*`.
-- After merging a hotfix to `main`, synchronize active release branches through a project-tracked `fix/*` PR based on each affected release; do not push synchronization commits directly.
+Use `docker compose --profile local logs -f agentgo-app` when diagnosing local startup failures. Stop with
+`docker compose --profile local down`; use `docker compose down -v` only when removing local database
+data is intentional.
 
-Before creating any release, feature, fix, or hotfix branch:
+## Coding conventions
 
-1. Create a repository Issue with context, expected outcome, acceptance criteria, and labels.
-2. Add it to AgentGo Project #2 and set `Branch`, `Source branch`, `Target branch`, and `Status`.
-3. For a release, record `Source branch = main` and `Target branch = main`; for feature/fix, record the same source and target release; for hotfix, record `main` as both.
-4. Set `Status = In Progress` when work starts. Create the branch only after verifying Project membership with the authenticated GitHub CLI.
-5. Add every associated PR to the same Project, populate its branch fields, and link the Issue using `Closes #<number>`.
-6. Set the Issue and PR items to `Done` only when their acceptance criteria are met; retain release planning items and branches.
-
-Each PR body must include the following machine-readable lines in addition to the repository template:
-
-```text
-Closes #<issue-number>
-Project: https://github.com/users/Martin-WMM/projects/2
-Source branch: <main-or-release/name>
-```
-
-The required `Branch flow policy` check validates permitted source/target branch types, issue naming and links, the declared source branch, and Git ancestry. Git does not record which checkout command created a branch; agents must verify the Project's source-branch field before creation. The PR check validates the Project declaration; actual Project membership and item fields must be verified with `gh project` during planning and review. Do not claim that a URL alone proves membership.
-
-Use `gh project item-add 2 --owner Martin-WMM --url <issue-or-pr-url>` and `gh project item-edit` to manage items. GitHub Actions' repository token does not provide user-Project automation permissions; never copy an interactive login credential into Actions secrets. Automated Project membership checks require a separately provisioned Projects credential.
+- Use Kotlin for new application and library code.
+- Use constructor injection for Spring dependencies.
+- Use programmatic transactions. Service implementations must open each transaction with
+  `TransactionTemplate` or `PlatformTransactionManager` at the call site that owns the unit
+  of work. Do not use declarative transactions: no `@Transactional` on classes or methods,
+  including `readOnly`, `rollbackFor`, and other attributes. Set propagation and the
+  read-only flag in that programmatic boundary so the transaction stays visible next to the
+  work it covers. When editing a service that still uses `@Transactional`, convert that
+  service in the same change.
+- Define every thread pool explicitly. Do not submit work to `ForkJoinPool.commonPool()`,
+  an unnamed `Executors` factory, `@Async` without an executor name, or a framework default
+  task executor. Register each pool as a Spring bean in the owning module's `config`
+  package. Give it a thread-name prefix that identifies the module and purpose, such as
+  `agentgo-file-upload-`. Set the pool size, queue capacity, and rejection policy on that
+  bean; do not leave them to framework defaults.
+- Follow the official Kotlin coding conventions: use four-space indentation, `PascalCase`
+  for classes and interfaces, `camelCase` for functions, properties, and parameters, and
+  `UPPER_SNAKE_CASE` only for true compile-time constants. Prefer immutable `val` values,
+  expression bodies where they improve readability, null-safe Kotlin types instead of
+  platform-type workarounds, and standard-library collection operations over avoidable
+  mutable state. Keep functions small and single-purpose, avoid unnecessary `!!`, and use
+  sealed types or explicit result types when a finite state or failure model must be
+  represented.
+- Keep Kotlin imports explicit and organized by IDE/Kotlin formatter defaults. Do not use
+  wildcard imports. Add KDoc to public classes, interfaces, functions, and properties when
+  their behavior or contract is not self-evident; use `@param`, `@return`, and `@throws`
+  where they add useful contract information.
+- Keep exactly one top-level Kotlin declaration per source file. Each `class`, `data class`,
+  `sealed class`, `enum class`, `interface`, `object`, and `typealias` must have its own file
+  named after the declaration, including test declarations where practical.
+- Keep Spring components focused and use constructor injection. Prefer data classes for
+  immutable value objects and request/response models, and do not expose mutable collections
+  from public APIs unless mutation is part of the contract.
+- Every module below `agentgo-app-modules` must be named `agentgo-app-<module-name>` using
+  lowercase kebab-case. The Gradle project path, module directory, and published artifact
+  name must follow the same convention.
+- Organize HTTP capabilities with an explicit Controller, Service, and Repository structure:
+  - Each `XxxController` must have a matching `XxxControllerApiDoc` interface under the
+    sibling `controller.apidoc` package. The API-doc
+    type is an interface implemented by the controller and contains the Springdoc/Swagger
+    contract, including tags, endpoint summaries/descriptions, parameters, request and
+    response schemas, and relevant HTTP responses. Keep endpoint mappings and business logic
+    out of the API-doc interface.
+  - Each service must be declared as an `XxxService` interface and implemented by exactly
+    one `XxxServiceImpl` class unless a deliberate alternative is documented. Put the
+    service contract and usage expectations in KDoc on the interface; keep orchestration and
+    business rules in the implementation rather than in controllers or repositories.
+  - Repositories must be responsible for persistence access only. Controllers must delegate
+    to services and must not access repositories directly.
+  - Cover Controller, Service, and Repository (DAO) with separate detailed unit tests, and
+    name each test method with Kotlin backtick sentence names. See
+    [Unit testing (Controller / Service / DAO)](#unit-testing-controller--service--dao).
+- Keep Spring configuration classes in a module's `config` package and configuration-properties
+  classes in its sibling `properties` package. Do not place `XxxProperties` beside `XxxConfig`.
+- `agentgo-dto` is organized into focused DTO modules. Define request, business response, and
+  protocol data models there when they cross module boundaries. Every externally visible DTO
+  field and model must have a useful Swagger/OpenAPI description (for example with `@Schema`),
+  including requiredness, format, examples, and allowed values where applicable. DTOs must remain
+  free of Spring service logic and persistence annotations.
+- PostgreSQL is the database of record. For each persisted model, define the JPA `Entity`
+  first, then define its repository interface. A repository must extend all of
+  `JpaRepository<Entity, Id>`, `JpaSpecificationExecutor<Entity>`, and
