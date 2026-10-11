@@ -17,7 +17,8 @@ The pinned Authentik version is `2026.8.3`. Keep the server and worker on the sa
 Copy-Item .env.example .env   # once
 docker compose up -d
 Copy-Item .bootRun.env.example .bootRun.env
-# fill AGENTGO_OIDC_CLIENT_SECRET in .bootRun.env
+# fill AGENTGO_OIDC_CLIENT_SECRET and AGENTGO_AUTHENTIK_API_TOKEN in .bootRun.env
+# On Windows keep MINIO_ENDPOINT=http://127.0.0.1:9001 (localhost can hang on IPv6).
 cd ..
 .\gradlew.bat :agentgo-app:bootRun
 # other terminal: pnpm --dir ..\AgentGo-UI dev
@@ -25,6 +26,9 @@ cd ..
 
 Do **not** start `--profile local` while using host `:8080`, and do **not** export `.bootRun.env`
 into the shell before a Compose `local` up (Compose inherits the process environment).
+
+Profile and avatar APIs need a non-empty `AGENTGO_AUTHENTIK_API_TOKEN` (Authentik Directory → Tokens,
+intent API). Without it, settings fields stay empty and profile sync fails.
 
 ## Full local stack
 
