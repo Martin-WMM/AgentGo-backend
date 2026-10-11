@@ -8,4 +8,7 @@ tasks.named<Jar>("jar") {
 
 dependencies {
     api("org.springdoc:springdoc-openapi-starter-common:${rootProject.extra["springdocVersion"]}")
+    api("jakarta.validation:jakarta.validation-api")
+    testImplementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
+    testImplementation("org.springframework.boot:spring-boot-starter-validation")
 }
