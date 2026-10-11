@@ -64,35 +64,25 @@ The build publishes exactly two executable Spring Boot Jars:
 The commons, core, DTO, and starter modules are internal library modules and must not be
 published as standalone release artifacts.
 
-For local container testing, use `local-deployments/docker-compose.yml`. It starts PostgreSQL
-and the `agentgo-app` image. Database changes must be made through versioned Flyway migrations
-in `db-migration`; keep `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments.
+### Environments (dev / local / test)
 
-The local Authentik identity center is defined separately in
-`local-deployment/docker-compose.yml`. It owns its own PostgreSQL volume and must not reuse the
-AgentGo application database. Keep Authentik credentials, client secrets, SMTP settings, and
-generated data in the ignored `.env` and Docker volumes. Do not copy credentials or data from
-other deployment repositories.
+Follow the workspace `AGENTS.md` promotion order: **dev → local → git/PR → test**.
 
-Start the local stack with:
+| Env | How to run | Health / UI checks |
+| --- | --- | --- |
+| **dev** | Infra: `cd local-deployment && docker compose up -d` (no `--profile local`). App: copy `.bootRun.env.example` → `.bootRun.env`, then `./gradlew :agentgo-app:bootRun`. UI: Vite `:5173` with backend `http://localhost:8080`. | `curl http://localhost:8080/actuator/health` |
+| **local** | `cd local-deployment && cp .env.example .env` then `docker compose --profile local up --build -d` (UI `:20080`, app `:20082`). | `curl http://localhost:20082/actuator/health` and open `http://localhost:20080` |
+| **test** | GitHub Actions **Deployment TEST** (`workflow_dispatch` on `release/*`) SSHs to the TEST host and updates `$DEPLOY_PATH` Compose. Gateway `:28080` (`/ui`, `/backend`). | Verify login/logout on `http://{DEPLOY_HOST}:28080/ui` |
 
-```bash
-cd local-deployments
-cp .env.example .env
-docker compose up --build -d
-```
+`local-deployment/docker-compose.yml` always can start shared infra (AgentGo Postgres `:5433`, Authentik `:9000`, MinIO). Services `agentgo-app`, `agentgo-ui`, and `authentik-oidc` require `--profile local`. Authentik uses its own PostgreSQL volume and must not reuse the AgentGo application database. Local Compose routes server-side OIDC token/JWKS through `authentik-oidc` so ID token `iss` is `http://localhost:9000/...` and RP-initiated logout `id_token_hint` validates.
 
-Never commit `.env`.
+Database schema changes must go through versioned Flyway migrations in `db-migration`; keep
+`SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in all environments. Keep Authentik credentials, client
+secrets, SMTP settings, and generated data in the ignored `.env` / `.bootRun.env` and Docker volumes.
+Do not copy credentials or data from other deployment repositories. Never commit `.env` or `.bootRun.env`.
 
-Verify the local stack with:
-
-```bash
-curl http://localhost:8080/actuator/health
-curl http://localhost:8080/swagger-ui.html
-```
-
-Use `docker compose logs -f agentgo-app` when diagnosing startup failures. Stop the stack
-with `docker compose down`; use `docker compose down -v` only when removing local database
+Use `docker compose --profile local logs -f agentgo-app` when diagnosing local startup failures. Stop with
+`docker compose --profile local down`; use `docker compose down -v` only when removing local database
 data is intentional.
 
 ## Coding conventions

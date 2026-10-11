@@ -16,27 +16,46 @@ services:
       retries: 12
     restart: unless-stopped
 
+  # Rewrites Host to localhost:9000 for in-compose OIDC token/JWKS/userinfo calls.
+  authentik-oidc:
+    # Pin a tag already present locally when Docker Hub is flaky (nginx:alpine pull).
+    image: nginx:1.27-alpine
+    profiles: ["local"]
+    volumes:
+      - ./nginx-authentik-oidc.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      authentik-server:
+        condition: service_healthy
+    restart: unless-stopped
+
   agentgo-app:
+    # Prefer host bootJar when in-container Gradle plugin downloads fail:
+    #   ..\gradlew.bat :agentgo-app:bootJar
+    #   copy ..\agentgo-app\build\libs\agentgo-app-*.jar .\agentgo-app.jar
     build:
-      context: ..
-      dockerfile: local-deployments/Dockerfile.app
+      context: .
+      dockerfile: Dockerfile.app.prebuilt
     image: agentgo-app:local
+    profiles: ["local"]
     env_file:
-      - ../local-deployments/.env
+      - .env
     environment:
       DATABASE_URL: jdbc:postgresql://agentgo-postgresql:5432/${AGENTGO_POSTGRES_DB:-agentgo}
       DATABASE_USERNAME: ${AGENTGO_POSTGRES_USER:-agentgo}
       DATABASE_PASSWORD: ${AGENTGO_POSTGRES_PASSWORD:-agentgo-local}
+      # Browser authorize/end-session stay on published localhost:9000.
+      # Server-side token calls go through authentik-oidc so ID token iss matches.
       AGENTGO_OIDC_AUTHORIZATION_URI: ${AGENTGO_OIDC_AUTHORIZATION_URI:-http://localhost:9000/application/o/authorize/}
-      AGENTGO_OIDC_TOKEN_URI: ${AGENTGO_OIDC_TOKEN_URI:-http://authentik-server:9000/application/o/token/}
-      AGENTGO_OIDC_JWK_SET_URI: ${AGENTGO_OIDC_JWK_SET_URI:-http://authentik-server:9000/application/o/agentgo/jwks/}
-      AGENTGO_OIDC_USER_INFO_URI: ${AGENTGO_OIDC_USER_INFO_URI:-http://authentik-server:9000/application/o/userinfo/}
-      AGENTGO_OIDC_CLIENT_ID: ${AGENTGO_OIDC_CLIENT_ID:-agentgo}
-      AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:-http://localhost:5173}
-      AGENTGO_AUTHENTIK_API_BASE_URL: ${AGENTGO_AUTHENTIK_API_BASE_URL:-http://authentik-server:9000}
-      AGENTGO_AUTHENTIK_API_TOKEN: ${AGENTGO_AUTHENTIK_API_TOKEN:-}
       AGENTGO_AUTHENTIK_BROWSER_BASE_URL: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:-http://localhost:9000}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      AGENTGO_OIDC_TOKEN_URI: http://authentik-oidc:9000/application/o/token/
+      AGENTGO_OIDC_JWK_SET_URI: http://authentik-oidc:9000/application/o/agentgo/jwks/
+      AGENTGO_OIDC_USER_INFO_URI: http://authentik-oidc:9000/application/o/userinfo/
+      AGENTGO_AUTHENTIK_API_BASE_URL: http://authentik-oidc:9000
+      AGENTGO_OIDC_CLIENT_ID: ${AGENTGO_OIDC_CLIENT_ID:-agentgo}
+      AGENTGO_OIDC_CLIENT_SECRET: ${AGENTGO_OIDC_CLIENT_SECRET:-}
+      AGENTGO_UI_BASE_URL: ${AGENTGO_UI_BASE_URL:-http://localhost:20080}
+      AGENTGO_AUTHENTIK_API_TOKEN: ${AGENTGO_AUTHENTIK_API_TOKEN:-}
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-local-minio-password-change-me}
       MINIO_BUCKET: ${MINIO_BUCKET:-agentgo-bucket}
@@ -51,10 +70,36 @@ services:
         condition: service_healthy
       authentik-server:
         condition: service_healthy
+      authentik-oidc:
+        condition: service_started
       minio:
         condition: service_healthy
     ports:
-      - "${AGENTGO_APP_PORT:-8080}:8080"
+      - "${AGENTGO_APP_PORT:-20082}:8080"
+    # Avoid package installs in the JRE image (apt mirrors may be unavailable).
+    # Probe readiness from the host after `docker compose up`.
+    restart: unless-stopped
+
+  agentgo-ui:
+    # Host-prebuild the UI into ./ui-dist before building this image:
+    #   VITE_AGENTGO_BACKEND_URL=http://localhost:20082 pnpm --dir ../../AgentGo-UI build
+    #   then copy app/dist -> local-deployment/ui-dist (see scripts/sync-ui-dist.ps1)
+    # Profile "local" = full Docker UI+app. Omit the profile for dev infra-only
+    # (host Vite :5173 + bootRun :8080 against shared Authentik/Postgres/MinIO).
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: agentgo-ui:local
+    profiles: ["local"]
+    depends_on:
+      - agentgo-app
+    ports:
+      - "${AGENTGO_UI_PORT:-20080}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/ >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
     restart: unless-stopped
 
   postgresql:

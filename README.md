@@ -37,7 +37,7 @@ Requirements / 环境要求: JDK 25, Gradle 9.1+, and Docker。
 ```bash
 gradle test koverVerify build
 
-cd local-deployments
+cd local-deployment
 cp .env.example .env
 docker compose up --build -d
 ```

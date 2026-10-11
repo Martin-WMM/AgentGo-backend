@@ -50,7 +50,7 @@ jobs:
         if: steps.image-check.outputs.exists != 'true'
         run: |
           set -euo pipefail
-          docker build -f local-deployments/Dockerfile.app --tag "$IMAGE_NAME:$IMAGE_TAG" .
+          docker build -f local-deployment/Dockerfile.app --tag "$IMAGE_NAME:$IMAGE_TAG" .
           docker push "$IMAGE_NAME:$IMAGE_TAG"
 
       - name: Prepare deployment SSH credentials

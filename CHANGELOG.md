@@ -4,11 +4,23 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ## [0.1.0-SNAPSHOT] - Unreleased
 
+### Fixed
+
+- RP-initiated logout now sends Authentik `id_token_hint` with `post_logout_redirect_uri`
+  (Authentik rejects the redirect alone as a malformed request).
+- Local Compose OIDC token/JWKS/userinfo calls go through `authentik-oidc` Host rewrite so
+  ID token `iss` is `http://localhost:9000/...` and browser end-session validates the hint.
+- Compose splits **dev** infra (default) from **local** UI/app (`--profile local`) so
+  `:5173`/`:8080` and `:20080`/`:20082` stay isolated.
+
 ### Added
 
-- Added `agentgo-app-models` with user-scoped model CRUD (`/api/models`), Flyway `tbl_model`,
+- Added `agentgo-app-models` with user-scoped model CRUD (`/api/v1/models`), Flyway `tbl_model`,
   and the focused `agentgo-dto-models` DTO module for LLM, multimodal, embedding, ASR, TTS,
   Speech2Speech, and other provider configurations.
+- Added shared `ApiVersions` / `ApiPaths` constants in `agentgo-commons` for URI path versioning.
+- Expanded Springdoc OpenAPI tag, operation, parameter, response, and DTO schema descriptions
+  for Authentication, Avatar, Files, and Models APIs.
 - Added an authenticated user profile API and UI settings form that synchronize display name,
   email, and avatar URL with Authentik through the server-side Core User API.
 - Added configurable SpringDoc OpenAPI metadata to `agentgo-springboot-starter`, including title,
@@ -18,7 +30,8 @@ All notable changes to AgentGo Backend are documented in this file.
 - Branded the local Authentik default brand as AgentGo using the shared AgentGo Logo asset.
 - Fixed the Authentik AgentGo brand asset mount to use the public media directory so the logo
   resolves in the admin interface.
-- Added a `local-deployments` Docker Compose stack for PostgreSQL and the executable web service.
+- Added a `local-deployment` Docker Compose stack for PostgreSQL, Authentik, MinIO, and the
+  executable web service.
 - Added Docker build and ignore files, an environment example, and local deployment verification instructions.
 - Added the `db-migration` Flyway migration directory and the initial schema metadata migration.
 - Added the `agentgo-app-modules` group with composable web, observability, persistence, and AI Spring Boot starters.
@@ -38,6 +51,10 @@ All notable changes to AgentGo Backend are documented in this file.
 
 ### Changed
 
+- Moved business HTTP APIs to `/api/v1/...` (`files`, `models`, avatar). Unversioned
+  `/api/files/**` and `/api/models/**` are removed. Auth remains at `/api/auth/**`.
+- Consolidated local Compose into `local-deployment/` and removed the duplicate
+  `local-deployments/` directory.
 - Raised the workspace and avatar upload limit to 100 MB and return FILE-011 through FILE-014
   in the standard `CommonHttpResponse` envelope when an upload is rejected.
 - Centralized project, Java, Kotlin, Spring Boot, Springdoc, LangGraph4j, Spring Shell, and Kover versions in the root `build.gradle.kts`.

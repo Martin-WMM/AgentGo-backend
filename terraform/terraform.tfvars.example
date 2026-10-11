@@ -4,19 +4,11 @@ authentik_url = "http://localhost:9000"
 
 # Do not put the API token in this file. Prefer:
 #   $env:AUTHENTIK_TOKEN = "..."
-# If the token is only available in another shell, copy this file to
-# terraform.auto.tfvars and set the value there; *.tfvars is ignored by Git.
 authentik_token = "replace-me"
 
-redirect_uris = [
-  {
-    url               = "http://localhost:8080/login/oauth2/code/authentik"
-    matching_mode     = "strict"
-    redirect_uri_type = "authorization"
-  },
-  {
-    url               = "http://localhost:5173"
-    matching_mode     = "strict"
-    redirect_uri_type = "logout"
-  }
-]
+# Defaults in variables.tf already cover:
+#   dev  — authorize :8080, logout :5173/?signedOut=1
+#   local — authorize :20082, logout :20080/?signedOut=1
+#   test — authorize/logout via :28080/backend and :28080/ui
+# Override redirect_uris here only when DEPLOY_HOST or ports differ.
+ui_base_url = "http://localhost:5173"

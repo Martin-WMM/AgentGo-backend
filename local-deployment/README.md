@@ -1,96 +1,64 @@
-# Local Authentik deployment
+# Local deployment
 
-This Compose stack provides the local Authentik identity center for AgentGo. It runs:
+Compose stack under `AgentGo-backend/local-deployment` supports two host modes that share
+Authentik / Postgres / MinIO, plus the remote **test** environment documented in the workspace
+`AGENTS.md`.
 
-- Authentik server and worker
-- PostgreSQL for Authentik state
-- MinIO object storage for local file assets
+| Mode | Command | UI | Backend |
+| --- | --- | --- | --- |
+| **dev** (infra only) | `docker compose up -d` | host Vite `:5173` | host `bootRun` `:8080` |
+| **local** (full Docker) | `docker compose --profile local up --build -d` | `:20080` | `:20082` |
 
 The pinned Authentik version is `2026.8.3`. Keep the server and worker on the same version.
 
-The deployment is intentionally isolated from the application database stack in
-`local-deployments/`.
+## Shared infra (dev)
 
-The default Authentik brand is configured as `AgentGo` and uses the Logo stored in
-`branding/agentgo-logo.png`. The file is mounted read-only into Authentik's public media directory so
-container recreation does not remove the brand asset.
-
-The default brand is also declared in `blueprints/agentgo-brand.yaml`, so a fresh local database
-receives the same title and logo during Authentik worker startup.
-
-## Start
-
-From `AgentGo-backend/local-deployment`:
-
-```bash
-cp .env.example .env
-docker compose pull
+```powershell
+Copy-Item .env.example .env   # once
 docker compose up -d
+Copy-Item .bootRun.env.example .bootRun.env
+# fill AGENTGO_OIDC_CLIENT_SECRET in .bootRun.env
+cd ..
+.\gradlew.bat :agentgo-app:bootRun
+# other terminal: pnpm --dir ..\AgentGo-UI dev
 ```
 
-Windows PowerShell:
+Do **not** start `--profile local` while using host `:8080`, and do **not** export `.bootRun.env`
+into the shell before a Compose `local` up (Compose inherits the process environment).
+
+## Full local stack
 
 ```powershell
 Copy-Item .env.example .env
-docker compose pull
-docker compose up -d
+$env:VITE_AGENTGO_BACKEND_URL = "http://localhost:20082"
+pnpm --dir ..\..\AgentGo-UI build
+.\scripts\sync-ui-dist.ps1
+..\gradlew.bat :agentgo-app:bootJar
+Copy-Item ..\agentgo-app\build\libs\agentgo-app-*.jar .\agentgo-app.jar -Force
+docker compose --profile local up --build -d
 ```
 
-Open the initial setup flow at:
+| Service | URL |
+| --- | --- |
+| UI | <http://localhost:20080> |
+| Backend | <http://localhost:20082> |
+| Authentik | <http://localhost:9000> |
 
-<http://localhost:9000/if/flow/initial-setup/>
+`agentgo-app` calls Authentik token/JWKS/userinfo through the internal `authentik-oidc` nginx
+proxy (Host rewritten to `localhost:9000`) so ID token `iss` matches browser end-session and
+logout with `id_token_hint` succeeds.
 
-The trailing slash is required by Authentik's initial setup flow. Create the local
-`akadmin` account in the browser; credentials are not stored in this repository.
-
-## MinIO object storage
-
-MinIO is available for local file and object-storage development:
-
-- S3 API: <http://localhost:9001>
-- MinIO Console: <http://localhost:9002>
-- Persistent data volume: `minio-data`
-
-Use `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` from the local `.env` file to sign in. The
-default values in `.env.example` are for local development only and must be changed before
-sharing the deployment or using it outside a local machine.
-
-## Configure AgentGo as an OIDC client
-
-After the initial setup, create an OAuth2/OpenID Provider and an Application in Authentik:
-
-1. Use `AgentGo` as the application name.
-2. Choose the OAuth2/OpenID Provider type.
-3. Add the AgentGo UI callback URL, for example
-   `http://localhost:5173/auth/callback`.
-4. Store the generated client ID and client secret outside Git.
-
-The provider issuer follows this form:
-
-```text
-http://localhost:9000/application/o/<provider-slug>/
-```
-
-The backend will use this issuer when its Spring Security OAuth2 resource-server integration
-is enabled. The current backend initialization contains the identity-center deployment; API
-authentication wiring will be added alongside the backend security module and its contract.
+Open Authentik initial setup at <http://localhost:9000/if/flow/initial-setup/> (trailing slash
+required). Never commit `.env` or `.bootRun.env`.
 
 ## Verify and stop
 
 ```bash
-docker compose ps
-docker compose logs -f authentik-server
-docker compose down
+docker compose --profile local ps
+curl http://localhost:20082/actuator/health
+curl http://localhost:20080/
+docker compose --profile local logs -f agentgo-app
+docker compose --profile local down
 ```
 
-To remove local Authentik data as well, use `docker compose down -v`. This permanently removes
-the local identity database and should only be used for a deliberate reset.
-
-## Security notes
-
-- Never commit `.env`, Authentik data, client secrets, SMTP credentials, or production keys.
-- Never commit MinIO credentials or object-storage data.
-- Generate a unique `AUTHENTIK_SECRET_KEY` and PostgreSQL password outside local-only testing.
-- The Docker socket is not mounted because this deployment does not manage Authentik outposts.
-- The original ContextX deployment contains credentials and data directories; they were not
-  copied into AgentGo.
+Use `docker compose down -v` only when removing local database volumes is intentional.
