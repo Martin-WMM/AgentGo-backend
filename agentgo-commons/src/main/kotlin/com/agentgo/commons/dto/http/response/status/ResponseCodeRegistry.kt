@@ -4,7 +4,11 @@ import com.agentgo.commons.dto.http.response.status.error.ErrorResponseCodeRegis
 import com.agentgo.commons.dto.http.response.status.success.AuthResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.BaseResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.FileResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.McpResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.ModelsResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.PromptsResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.SettingsResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.WorkspaceResponseCodeRegistry
 
 /**
  * Aggregate numeric response-code lookup table.
@@ -18,7 +22,11 @@ object ResponseCodeRegistry {
         putAll(BaseResponseCodeRegistry.responseTypesByCode)
         putAll(AuthResponseCodeRegistry.responseTypesByCode)
         putAll(FileResponseCodeRegistry.responseTypesByCode)
+        putAll(WorkspaceResponseCodeRegistry.responseTypesByCode)
         putAll(ModelsResponseCodeRegistry.responseTypesByCode)
+        putAll(PromptsResponseCodeRegistry.responseTypesByCode)
+        putAll(McpResponseCodeRegistry.responseTypesByCode)
+        putAll(SettingsResponseCodeRegistry.responseTypesByCode)
         putAll(ErrorResponseCodeRegistry.responseTypesByCode)
     }
 
@@ -31,7 +39,11 @@ object ResponseCodeRegistry {
             BaseResponseCodeRegistry.codeDescriptions[type]
                 ?: AuthResponseCodeRegistry.codeDescriptions[type]
                 ?: FileResponseCodeRegistry.codeDescriptions[type]
+                ?: WorkspaceResponseCodeRegistry.codeDescriptions[type]
                 ?: ModelsResponseCodeRegistry.codeDescriptions[type]
+                ?: PromptsResponseCodeRegistry.codeDescriptions[type]
+                ?: McpResponseCodeRegistry.codeDescriptions[type]
+                ?: SettingsResponseCodeRegistry.codeDescriptions[type]
                 ?: ErrorResponseCodeRegistry.description(type)
         }
 }
