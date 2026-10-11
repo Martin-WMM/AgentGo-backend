@@ -118,39 +118,3 @@ class ValidationExceptionHandlerTest {
         assertEquals("request", (blankFields.first() as ValidationFieldError).field)
         val missingFields = (missing.body?.error as Map<*, *>)["fields"] as List<*>
         assertEquals("The request body is invalid.", (missingFields.first() as ValidationFieldError).message)
-    }
-
-    private fun violation(path: String, message: String): ConstraintViolation<Any> {
-        val propertyPath = Proxy.newProxyInstance(
-            javaClass.classLoader,
-            arrayOf(Path::class.java),
-            InvocationHandler { proxy, method, _ ->
-                when (method.name) {
-                    "toString" -> path
-                    "hashCode" -> System.identityHashCode(proxy)
-                    "equals" -> false
-                    else -> null
-                }
-            },
-        ) as Path
-        return Proxy.newProxyInstance(
-            javaClass.classLoader,
-            arrayOf(ConstraintViolation::class.java),
-            InvocationHandler { proxy, method, args ->
-                when (method.name) {
-                    "getPropertyPath" -> propertyPath
-                    "getMessage" -> message
-                    "hashCode" -> System.identityHashCode(proxy)
-                    "equals" -> args?.firstOrNull() === proxy
-                    "toString" -> "ConstraintViolation($path=$message)"
-                    else -> null
-                }
-            },
-        ) as ConstraintViolation<Any>
-    }
-
-    private class SampleController {
-        @Suppress("UNUSED_PARAMETER")
-        fun create(name: String) = Unit
-    }
-}
