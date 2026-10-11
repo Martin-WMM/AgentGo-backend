@@ -2,6 +2,21 @@ import org.gradle.jvm.tasks.Jar
 
 description = "AgentGo user-owned MCP Streamable HTTP server management module"
 
+// The Streamable HTTP client talks to a remote MCP server, and auto-configuration
+// only wires Spring beans. Unit tests cover the management API around that boundary.
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "com.agentgo.mcp.client.McpStreamableHttpClientImpl*",
+                    "com.agentgo.mcp.config.*",
+                )
+            }
+        }
+    }
+}
+
 tasks.named<Jar>("jar") {
     enabled = true
 }
