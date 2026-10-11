@@ -178,3 +178,181 @@ data is intentional.
     type is an interface implemented by the controller and contains the Springdoc/Swagger
     contract, including tags, endpoint summaries/descriptions, parameters, request and
     response schemas, and relevant HTTP responses. Keep endpoint mappings and business logic
+    out of the API-doc interface.
+  - Each service must be declared as an `XxxService` interface and implemented by exactly
+    one `XxxServiceImpl` class unless a deliberate alternative is documented. Put the
+    service contract and usage expectations in KDoc on the interface; keep orchestration and
+    business rules in the implementation rather than in controllers or repositories.
+  - Repositories must be responsible for persistence access only. Controllers must delegate
+    to services and must not access repositories directly.
+  - Cover Controller, Service, and Repository (DAO) with separate detailed unit tests, and
+    name each test method with Kotlin backtick sentence names. See
+    [Unit testing (Controller / Service / DAO)](#unit-testing-controller--service--dao).
+- Keep Spring configuration classes in a module's `config` package and configuration-properties
+  classes in its sibling `properties` package. Do not place `XxxProperties` beside `XxxConfig`.
+- `agentgo-dto` is organized into focused DTO modules. Define request, business response, and
+  protocol data models there when they cross module boundaries. Every externally visible DTO
+  field and model must have a useful Swagger/OpenAPI description (for example with `@Schema`),
+  including requiredness, format, examples, and allowed values where applicable. DTOs must remain
+  free of Spring service logic and persistence annotations.
+- PostgreSQL is the database of record. For each persisted model, define the JPA `Entity`
+  first, then define its repository interface. A repository must extend all of
+  `JpaRepository<Entity, Id>`, `JpaSpecificationExecutor<Entity>`, and
+  `QueryByExampleExecutor<Entity>` as appropriate for the entity. Keep entity mappings,
+  identifiers, nullability, indexes, and column constraints aligned with the corresponding
+  Flyway migration; use `ddl-auto=validate` and never rely on Hibernate to create or update
+  production schema.
+- Every JPA entity must contain `creator`, `createdAt`, `updatedAt`, and `updatedBy` audit
+  fields. Use Spring Data JPA auditing (`@CreatedBy`, `@CreatedDate`, `@LastModifiedDate`,
+  and `@LastModifiedBy`) with a configured `AuditorAware`; do not manage these timestamps
+  manually in entity lifecycle callbacks.
+- `agentgo-commons` provides shared data formats, value objects, exceptions, general utilities,
+  and the standard transport response contracts. Keep these types framework-agnostic where
+  possible; do not place application controllers, Spring configuration, or persistence entities
+  there. Maintain the shared code-to-exception registry in Commons when adding a new externally
+  visible error code; error codes must be stable and must not be silently reused.
+- `agentgo-springboot-starter` provides shared Spring Boot infrastructure and foundational
+  auto-configuration. It must expose common beans such as the project `ObjectMapper`, define
+  `LogAspect` to log controller/service input and output parameters with appropriate
+  redaction and without leaking secrets, and provide the Springdoc OpenAPI integration used
+  by the application. Keep starter configuration reusable and avoid application-specific
+  business logic in this module.
+- Keep DTOs stable, serialization-friendly, and free of Spring or persistence concerns.
+- All HTTP responses must use `com.agentgo.commons.dto.http.response.CommonHttpResponse<T>`,
+  all SSE events must use `com.agentgo.commons.dto.http.response.CommonEventResponse<E>`, and
+  all paginated responses must use `com.agentgo.commons.dto.http.response.PageResponse<T>`.
+  Paginated query inputs must use `com.agentgo.commons.dto.http.request.PageRequest`, with
+  `page` starting at one and `SortOrder` limited to `ASC` or `DESC`. Do not introduce
+  alternative HTTP response envelopes, SSE event payloads, pagination request/response DTOs,
+  or sorting-direction enums.
+- In `CommonHttpResponse`, `code` is a stable integer system or business code (for example,
+  `2001`), never an HTTP status code. `responseType` is its corresponding stable string code
+  (for example, `FILE-001`). Set HTTP status through the HTTP response status line; use `error`
+  for the corresponding
+  `ErrorResponseCodeRegistry` description when `success` is `false`.
+- Register every code in the appropriate `dto.http.response.status.success` or
+  `dto.http.response.status.error` `XxxResponseCodeRegistry` before using it in a response.
+  Use `BaseResponseCodeRegistry.SUCCESS` only when no distinct successful business state needs
+  to be exposed.
+- Keep response-code metadata under `com.agentgo.commons.dto.http.response.status`. Place
+  successful outcomes in its `success` package and failures in its `error` package. Split code
+  definitions by business domain into `XxxResponseCodeRegistry` types (for example,
+  `FileResponseCodeRegistry` and `AuthResponseCodeRegistry`); do not add unrelated codes to a
+  base or aggregate registry. `ErrorResponseCodeRegistry` may aggregate error registries only
+  for lookup and must not define domain-specific codes itself. Each registered code must define
+  its meaning, category, and safe example message through `ResponseCodeDescription`.
+- Maintain the canonical integer `code` to string `responseType` correspondence in
+  `ResponseCodeRegistry.responseTypesByCode`. Every entry must resolve to a registered domain
+  response type and must never be reused for a different outcome.
+- For a dedicated module exception class with one fixed error status, register its
+  `ExceptionClass → (code, responseType)` mapping with
+  `ExceptionResponseCodeRegistry.register(...)` during module initialization. The registry
+  rejects unregistered or mismatched Code pairs. Exceptions that intentionally carry different
+  statuses per instance must expose their registered `code` and `responseType` explicitly.
+- Use Actuator for health and operational endpoints; do not add a custom health controller.
+- Keep application capability dependencies in `agentgo-app-modules`; `agentgo-app` should
+  compose those starters rather than re-declaring their infrastructure dependencies.
+- Add database changes only as new Flyway migrations under
+  `db-migration/src/main/resources/db/migration/` using `V<version>__<description>.sql`.
+- Never edit a migration that has been applied to a shared environment; create a new version.
+- Document externally visible API changes in `README.md` and `CHANGELOG.md` when appropriate.
+- Never commit secrets, credentials, tokens, private keys, or production data.
+- Keep changes focused and preserve unrelated user work.
+
+## Version and dependency changes
+
+When adding or upgrading a dependency:
+
+1. Define or update its version in the root `build.gradle.kts`.
+2. Use versionless dependency declarations in module build files when dependency management
+   provides the version.
+3. Update documentation or `CHANGELOG.md` if the change affects users or release artifacts.
+4. Run tests, coverage verification, and the full build.
+
+## Git and pull request workflow
+
+The intended flow is:
+
+```text
+main -> release/* -> feature/* or fix/* -> PR -> release/* -> PR -> main
+```
+
+- `main` and `release/*` are protected and must not receive direct commits.
+- Pull requests must pass Merge CI, Commit Review, Dependency Review, and Review Policy.
+- Pull requests created by the repository owner may pass Review Policy automatically.
+- Pull requests created by other contributors require an approval from a reviewer other than
+  the author.
+- Use the repository PR template and complete every applicable section.
+- Use the issue templates for bug reports and feature requests.
+- Keep the PR description in English and document release impact and validation results.
+
+Commit messages must use the format:
+
+```text
+<emoji><type>: <message>
+```
+
+Each commit must change fewer than 300 lines. Examples:
+
+```text
+✨feat: add agent workflow endpoint
+🐛fix: handle missing request identifier
+📝docs: update release instructions
+```
+
+## Security and quality
+
+Security-sensitive changes require extra care and must not weaken repository protections.
+The repository uses security advisories, secret scanning, dependency review, CodeQL, and
+private vulnerability reporting. Report vulnerabilities through the repository security
+advisory process rather than opening a public issue.
+
+Before handoff, verify:
+
+- `git diff --check` passes.
+- Tests and `koverVerify` pass.
+- `gradle build` succeeds.
+- Only the two intended executable Jars are release artifacts.
+- Documentation and changelog entries are updated when required.
+- The working tree contains only intentional changes.
+
+## Branch governance and AgentGo Project
+
+All branch planning uses [AgentGo GitHub Project #2](https://github.com/users/Martin-WMM/projects/2).
+This repository is linked to that shared Project; do not create a separate planning board.
+
+```text
+main -> release/<name> -> feature/<issue-number>-<name> or fix/<issue-number>-<name>
+     feature/fix -> PR -> their source release/<name> -> PR -> main
+main -> hotfix/<issue-number>-<name> -> PR -> main
+```
+
+- Create `release/*` and `hotfix/*` from an up-to-date `origin/main`.
+- Create `feature/*` and `fix/*` from the intended, up-to-date `origin/release/*`, never directly from `main`.
+- A PR into `release/*` must come from `feature/*` or `fix/*` created for that release.
+- A PR into `main` must come from `release/*` or `hotfix/*`; feature/fix branches cannot target `main`.
+- `main` and every `release/*` prohibit deletion, force pushes, and direct pushes. Change them only through PRs with all required checks passing.
+- Retain `release/*` permanently, including after promotion to `main`. Never remove or bypass their deletion protection for cleanup.
+- Disable repository-wide automatic head-branch deletion. Cleanup may delete only merged `feature/*`, `fix/*`, and `hotfix/*`.
+- After merging a hotfix to `main`, synchronize active release branches through a project-tracked `fix/*` PR based on each affected release; do not push synchronization commits directly.
+
+Before creating any release, feature, fix, or hotfix branch:
+
+1. Create a repository Issue with context, expected outcome, acceptance criteria, and labels.
+2. Add it to AgentGo Project #2 and set `Branch`, `Source branch`, `Target branch`, and `Status`.
+3. For a release, record `Source branch = main` and `Target branch = main`; for feature/fix, record the same source and target release; for hotfix, record `main` as both.
+4. Set `Status = In Progress` when work starts. Create the branch only after verifying Project membership with the authenticated GitHub CLI.
+5. Add every associated PR to the same Project, populate its branch fields, and link the Issue using `Closes #<number>`.
+6. Set the Issue and PR items to `Done` only when their acceptance criteria are met; retain release planning items and branches.
+
+Each PR body must include the following machine-readable lines in addition to the repository template:
+
+```text
+Closes #<issue-number>
+Project: https://github.com/users/Martin-WMM/projects/2
+Source branch: <main-or-release/name>
+```
+
+The required `Branch flow policy` check validates permitted source/target branch types, issue naming and links, the declared source branch, and Git ancestry. Git does not record which checkout command created a branch; agents must verify the Project's source-branch field before creation. The PR check validates the Project declaration; actual Project membership and item fields must be verified with `gh project` during planning and review. Do not claim that a URL alone proves membership.
+
+Use `gh project item-add 2 --owner Martin-WMM --url <issue-or-pr-url>` and `gh project item-edit` to manage items. GitHub Actions' repository token does not provide user-Project automation permissions; never copy an interactive login credential into Actions secrets. Automated Project membership checks require a separately provisioned Projects credential.
