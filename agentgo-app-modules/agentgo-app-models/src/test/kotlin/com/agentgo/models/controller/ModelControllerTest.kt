@@ -23,8 +23,18 @@ class ModelControllerTest {
     @Test
     fun delegatesCrudOperationsAndWrapsSuccessCodes() {
         val id = UUID.randomUUID()
-        val createRequest = ModelCreateRequest("gpt", "openai", ModelType.LLM)
-        val updateRequest = ModelUpdateRequest("gpt", "openai", ModelType.LLM, emptyMap(), "desc")
+        val createRequest = ModelCreateRequest().apply {
+            name = "gpt"
+            provider = "openai"
+            type = ModelType.LLM
+        }
+        val updateRequest = ModelUpdateRequest().apply {
+            name = "gpt"
+            provider = "openai"
+            type = ModelType.LLM
+            configuration = emptyMap()
+            description = "desc"
+        }
         val response = ModelResponse(
             id = id,
             name = "gpt",
