@@ -2,6 +2,7 @@ package com.agentgo.auth.service.impl
 
 import com.agentgo.auth.client.AuthentikProfileClient
 import com.agentgo.auth.service.AuthService
+import com.agentgo.auth.service.UserProfileService
 import com.agentgo.dto.auth.ProfileResponse
 import com.agentgo.dto.auth.ProfileUpdateRequest
 import com.agentgo.dto.auth.SessionResponse
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service
 @Service
 class AuthServiceImpl(
     private val authentikProfileClient: AuthentikProfileClient,
+    private val userProfileService: UserProfileService,
 ) : AuthService {
     override fun currentSession(): SessionResponse {
         val authentication = SecurityContextHolder.getContext().authentication
@@ -40,15 +42,12 @@ class AuthServiceImpl(
 
     override fun currentProfile(): ProfileResponse {
         val session = requireAuthenticatedSession()
-        val user = authentikProfileClient.findBySubject(session.subject!!, session.email)
-        return user.toProfileResponse()
+        return userProfileService.currentProfile(session.subject!!, session.email)
     }
 
     override fun updateProfile(request: ProfileUpdateRequest): ProfileResponse {
-        require(request.displayName.isNotBlank()) { "Display name must not be blank" }
         val session = requireAuthenticatedSession()
-        val user = authentikProfileClient.findBySubject(session.subject!!, session.email)
-        return authentikProfileClient.update(user, request).toProfileResponse()
+        return userProfileService.updateProfile(session.subject!!, session.email, request)
     }
 
     private fun requireAuthenticatedSession(): SessionResponse {
@@ -58,11 +57,4 @@ class AuthServiceImpl(
         }
         return session
     }
-
-    private fun com.agentgo.auth.client.AuthentikUserResponse.toProfileResponse() = ProfileResponse(
-        username = username,
-        displayName = name,
-        email = email,
-        avatarUrl = avatar,
-    )
 }

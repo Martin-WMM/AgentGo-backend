@@ -12,19 +12,20 @@ interface AuthService {
     fun currentSession(): SessionResponse
 
     /**
-     * Returns the editable profile synchronized with the current Authentik user.
+     * Returns the current profile. Identity fields come from Authentik and are mirrored locally.
+     * Extended personal details come from the AgentGo profile row.
      *
-     * @return the current user's Authentik-managed profile
+     * @return the current user's merged profile
      * @throws IllegalStateException when there is no authenticated session or Authentik cannot be queried
      */
     fun currentProfile(): ProfileResponse
 
     /**
-     * Updates the current user's profile in Authentik and returns the saved profile.
+     * Updates identity fields in Authentik and stores extended personal details locally.
      *
      * @param request the editable profile fields
-     * @return the profile returned by Authentik after the update
-     * @throws IllegalArgumentException when a required profile field is invalid
+     * @return the profile stored after synchronization
+     * @throws com.agentgo.auth.exception.InvalidProfileRequestException when a profile field is invalid
      * @throws IllegalStateException when there is no authenticated session or Authentik cannot be updated
      */
     fun updateProfile(request: ProfileUpdateRequest): ProfileResponse

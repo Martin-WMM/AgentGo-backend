@@ -3,6 +3,7 @@ package com.agentgo.auth.controller
 import com.agentgo.auth.properties.AuthProperties
 import com.agentgo.auth.controller.apidoc.AuthControllerApiDoc
 import com.agentgo.auth.service.AuthService
+import com.agentgo.commons.annotation.AgentGoLogApi
 import com.agentgo.dto.auth.SessionResponse
 import com.agentgo.dto.auth.ProfileResponse
 import com.agentgo.dto.auth.ProfileUpdateRequest
@@ -16,10 +17,12 @@ class AuthController(
     private val authProperties: AuthProperties,
     private val authService: AuthService,
 ) : AuthControllerApiDoc {
+    @AgentGoLogApi(name = "auth.login")
     override fun login(response: HttpServletResponse) {
         response.sendRedirect("/oauth2/authorization/${authProperties.registrationId}")
     }
 
+    @AgentGoLogApi(name = "auth.session")
     override fun session(): ResponseEntity<SessionResponse> {
         val session = authService.currentSession()
         return if (session.authenticated) {
@@ -29,8 +32,10 @@ class AuthController(
         }
     }
 
+    @AgentGoLogApi(name = "auth.profile.get")
     override fun profile(): ResponseEntity<ProfileResponse> = ResponseEntity.ok(authService.currentProfile())
 
+    @AgentGoLogApi(name = "auth.profile.update")
     override fun updateProfile(request: ProfileUpdateRequest): ResponseEntity<ProfileResponse> =
         ResponseEntity.ok(authService.updateProfile(request))
 }

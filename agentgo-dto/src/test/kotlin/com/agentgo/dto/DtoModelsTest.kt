@@ -13,21 +13,62 @@ import kotlin.test.assertNull
 class DtoModelsTest {
     @Test
     fun storesProfileResponseFields() {
-        val response = ProfileResponse("ada", "Ada Lovelace", "ada@example.com", null)
+        val response = ProfileResponse(
+            username = "ada",
+            displayName = "Ada Lovelace",
+            email = "ada@example.com",
+            avatarUrl = null,
+            phoneNumber = "+1 202 555 0100",
+            description = "Mathematician",
+            occupation = "Mathematician",
+            organization = "Analytical Engines",
+            homepageUrl = "https://example.com/ada",
+            location = "London",
+            timezone = "Europe/London",
+            preferredLanguage = "en",
+        )
 
         assertEquals("ada", response.username)
         assertEquals("Ada Lovelace", response.displayName)
         assertEquals("ada@example.com", response.email)
         assertNull(response.avatarUrl)
+        assertEquals("+1 202 555 0100", response.phoneNumber)
+        assertEquals("Mathematician", response.description)
+        assertEquals("Mathematician", response.occupation)
+        assertEquals("Analytical Engines", response.organization)
+        assertEquals("https://example.com/ada", response.homepageUrl)
+        assertEquals("London", response.location)
+        assertEquals("Europe/London", response.timezone)
+        assertEquals("en", response.preferredLanguage)
     }
 
     @Test
     fun storesProfileUpdateFields() {
-        val request = ProfileUpdateRequest("Ada Lovelace", null, "https://example.com/avatar.png")
+        val request = ProfileUpdateRequest().apply {
+            displayName = "Ada Lovelace"
+            email = null
+            avatarUrl = "https://example.com/avatar.png"
+            phoneNumber = "+1 202 555 0100"
+            description = "Mathematician"
+            occupation = "Mathematician"
+            organization = "Analytical Engines"
+            homepageUrl = "https://example.com/ada"
+            location = "London"
+            timezone = "Europe/London"
+            preferredLanguage = "en"
+        }
 
         assertEquals("Ada Lovelace", request.displayName)
         assertNull(request.email)
         assertEquals("https://example.com/avatar.png", request.avatarUrl)
+        assertEquals("+1 202 555 0100", request.phoneNumber)
+        assertEquals("Mathematician", request.description)
+        assertEquals("Mathematician", request.occupation)
+        assertEquals("Analytical Engines", request.organization)
+        assertEquals("https://example.com/ada", request.homepageUrl)
+        assertEquals("London", request.location)
+        assertEquals("Europe/London", request.timezone)
+        assertEquals("en", request.preferredLanguage)
     }
 
     @Test
