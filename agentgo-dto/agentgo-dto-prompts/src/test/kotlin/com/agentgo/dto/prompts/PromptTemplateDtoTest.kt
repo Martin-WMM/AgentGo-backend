@@ -4,6 +4,8 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class PromptTemplateDtoTest {
@@ -60,5 +62,64 @@ class PromptTemplateDtoTest {
     @Test
     fun `exposes every engine`() {
         assertEquals(listOf(PromptEngine.SIMPLE, PromptEngine.JINJA2), PromptEngine.entries)
+    }
+
+    @Test
+    fun `requests match an equal copy and reject a different value`() {
+        val variables = mapOf<String, Any?>("name" to "Ada")
+        val create = PromptTemplateCreateRequest().apply {
+            name = "Greeting"
+            engine = PromptEngine.SIMPLE
+            content = "Hello"
+            description = "hi"
+        }
+        val createCopy = PromptTemplateCreateRequest().apply {
+            name = create.name
+            engine = create.engine
+            content = create.content
+            description = create.description
+        }
+        val update = PromptTemplateUpdateRequest().apply {
+            name = create.name
+            engine = PromptEngine.JINJA2
+            content = create.content
+            description = create.description
+        }
+        val updateCopy = PromptTemplateUpdateRequest().apply {
+            name = update.name
+            engine = update.engine
+            content = update.content
+            description = update.description
+        }
+        val preview = PromptTemplatePreviewRequest().apply {
+            engine = PromptEngine.SIMPLE
+            content = "Hello"
+            this.variables = variables
+        }
+        val previewCopy = PromptTemplatePreviewRequest().apply {
+            engine = preview.engine
+            content = preview.content
+            this.variables = preview.variables
+        }
+        val render = PromptTemplateRenderRequest().apply { this.variables = variables }
+        val renderCopy = PromptTemplateRenderRequest().apply { this.variables = render.variables }
+
+        assertEquals(create, createCopy)
+        assertEquals(create.hashCode(), createCopy.hashCode())
+        assertEquals(create, create)
+        assertNotEquals(create, PromptTemplateCreateRequest())
+        assertFalse(create.equals("Greeting"))
+        assertEquals(update, updateCopy)
+        assertEquals(update.hashCode(), updateCopy.hashCode())
+        assertNotEquals(update, PromptTemplateUpdateRequest())
+        assertFalse(update.equals(create))
+        assertEquals(preview, previewCopy)
+        assertEquals(preview.hashCode(), previewCopy.hashCode())
+        assertNotEquals(preview, PromptTemplatePreviewRequest())
+        assertFalse(preview.equals(variables))
+        assertEquals(render, renderCopy)
+        assertEquals(render.hashCode(), renderCopy.hashCode())
+        assertNotEquals(render, PromptTemplateRenderRequest())
+        assertFalse(render.equals(variables))
     }
 }
