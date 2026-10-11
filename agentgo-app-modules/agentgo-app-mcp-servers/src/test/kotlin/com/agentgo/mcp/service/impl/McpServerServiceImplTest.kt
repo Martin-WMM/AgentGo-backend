@@ -238,3 +238,56 @@ class McpServerServiceImplTest {
         McpServerResponse(
             id = id,
             name = name,
+            transport = McpTransport.STREAMABLE_HTTP,
+            endpointUrl = "https://mcp.example.com/mcp",
+            authType = McpAuthType.NONE,
+            customHeaders = emptyMap(),
+            protocolVersion = "2025-03-26",
+            enabled = true,
+            status = McpServerStatus.UNKNOWN,
+            serverCapabilities = emptyMap(),
+            tools = emptyList(),
+            createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+            updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
+        )
+
+    private fun McpServerEntity.copy(
+        id: UUID? = this.id,
+        createdAt: Instant? = this.createdAt,
+        updatedAt: Instant? = this.updatedAt,
+    ): McpServerEntity =
+        McpServerEntity(
+            id = id,
+            ownerUserId = ownerUserId,
+            name = name,
+            transport = transport,
+            endpointUrl = endpointUrl,
+            authType = authType,
+            authToken = authToken,
+            authHeaderName = authHeaderName,
+            customHeaders = customHeaders,
+            protocolVersion = protocolVersion,
+            enabled = enabled,
+            status = status,
+            remoteServerName = remoteServerName,
+            remoteServerVersion = remoteServerVersion,
+            serverCapabilities = serverCapabilities,
+            toolsCache = toolsCache,
+            lastConnectedAt = lastConnectedAt,
+            lastError = lastError,
+            description = description,
+            creator = creator,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            updatedBy = updatedBy,
+        )
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus =
+            SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
+}
