@@ -1,6 +1,7 @@
 package com.agentgo.auth.controller
 
 import com.agentgo.auth.service.AvatarService
+import com.agentgo.commons.annotation.AgentGoLogApi
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.commons.dto.http.response.status.success.AuthResponseCodeRegistry
 import com.agentgo.dto.file.FileMetadataResponse
@@ -18,9 +19,11 @@ import org.springframework.web.multipart.MultipartFile
 class AvatarController(
     private val avatarService: AvatarService,
 ) : AvatarControllerApiDoc {
+    @AgentGoLogApi(name = "auth.avatar.upload")
     override fun uploadAvatar(file: MultipartFile): CommonHttpResponse<FileMetadataResponse> =
         CommonHttpResponse(code = AuthResponseCodeRegistry.AVATAR_UPDATED, responseType = AuthResponseCodeRegistry.AVATAR_UPDATED_TYPE, message = "Avatar updated", data = avatarService.uploadAvatar(file))
 
+    @AgentGoLogApi(name = "auth.avatar.download")
     override fun downloadAvatar(): ResponseEntity<ByteArrayResource> = avatarService.downloadAvatar().toResponse()
 
     private fun StoredFile.toResponse(): ResponseEntity<ByteArrayResource> = ResponseEntity.ok()

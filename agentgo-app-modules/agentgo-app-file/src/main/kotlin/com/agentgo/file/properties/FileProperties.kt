@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "agentgo.file")
 data class FileProperties(
-    val minioEndpoint: String = "http://localhost:9001",
+    val minioEndpoint: String = "http://127.0.0.1:9001",
     val minioAccessKey: String = "minioadmin",
     val minioSecretKey: String = "local-minio-password-change-me",
     val bucketName: String = "agentgo-bucket",

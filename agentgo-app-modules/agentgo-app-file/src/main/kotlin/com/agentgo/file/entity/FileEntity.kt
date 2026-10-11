@@ -44,7 +44,7 @@ class FileEntity(
     var versionId: String? = null,
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata", nullable = false, columnDefinition = "jsonb", comment = "MinIO user metadata")
+    @Column(name = "metadata", nullable = false, comment = "MinIO user metadata")
     var metadata: Map<String, String> = emptyMap(),
 
     @CreatedBy
