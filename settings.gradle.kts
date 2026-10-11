@@ -27,7 +27,14 @@ include(
     ":agentgo-core",
     ":agentgo-dto",
     ":agentgo-dto:agentgo-dto-models",
+    ":agentgo-dto:agentgo-dto-mcp",
+    ":agentgo-dto:agentgo-dto-prompts",
+    ":agentgo-dto:agentgo-dto-settings",
     ":agentgo-app-modules:agentgo-app-models",
+    ":agentgo-app-modules:agentgo-app-mcp-servers",
+    ":agentgo-app-modules:agentgo-app-prompts",
+    ":agentgo-app-modules:agentgo-app-settings",
+
     ":agentgo-springboot-starter",
     ":agentgo-cli",
 )
