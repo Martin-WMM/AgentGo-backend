@@ -60,7 +60,7 @@ class ModelEntity(
     var type: ModelType = ModelType.OTHER,
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "configuration", nullable = false, columnDefinition = "jsonb", comment = "Provider-specific JSON configuration")
+    @Column(name = "configuration", nullable = false, comment = "Provider-specific JSON configuration")
     var configuration: Map<String, Any?> = emptyMap(),
 
     @Column(name = "description", length = 2000, comment = "Optional free-form description")
