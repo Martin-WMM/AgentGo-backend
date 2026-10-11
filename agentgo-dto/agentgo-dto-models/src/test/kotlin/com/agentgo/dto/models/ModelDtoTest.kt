@@ -9,11 +9,11 @@ import kotlin.test.assertNull
 class ModelDtoTest {
     @Test
     fun storesCreateRequestDefaults() {
-        val request = ModelCreateRequest(
-            name = "gpt-4o-mini",
-            provider = "openai",
-            type = ModelType.LLM,
-        )
+        val request = ModelCreateRequest().apply {
+            name = "gpt-4o-mini"
+            provider = "openai"
+            type = ModelType.LLM
+        }
 
         assertEquals("gpt-4o-mini", request.name)
         assertEquals("openai", request.provider)
@@ -28,18 +28,18 @@ class ModelDtoTest {
         val updatedAt = Instant.parse("2026-01-02T00:00:00Z")
         val id = UUID.randomUUID()
         val configuration = mapOf<String, Any?>("model" to "text-embedding-3-small", "dimensions" to 1536)
-        val update = ModelUpdateRequest(
-            name = "embeddings",
-            provider = "openai",
-            type = ModelType.EMBEDDING,
-            configuration = configuration,
-            description = "Workspace embeddings",
-        )
+        val update = ModelUpdateRequest().apply {
+            name = "embeddings"
+            provider = "openai"
+            type = ModelType.EMBEDDING
+            this.configuration = configuration
+            description = "Workspace embeddings"
+        }
         val response = ModelResponse(
             id = id,
             name = update.name,
             provider = update.provider,
-            type = update.type,
+            type = checkNotNull(update.type),
             configuration = update.configuration,
             description = update.description,
             createdAt = createdAt,

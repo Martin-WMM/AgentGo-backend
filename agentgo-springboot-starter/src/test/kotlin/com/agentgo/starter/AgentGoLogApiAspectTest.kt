@@ -1,6 +1,6 @@
 package com.agentgo.starter
 
-import com.agentgo.starter.annotation.AgentGoLogApi
+import com.agentgo.commons.annotation.AgentGoLogApi
 import java.lang.reflect.Proxy
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.reflect.MethodSignature
