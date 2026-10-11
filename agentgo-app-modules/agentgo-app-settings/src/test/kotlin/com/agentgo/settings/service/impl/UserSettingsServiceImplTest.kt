@@ -78,3 +78,123 @@ class UserSettingsServiceImplTest {
                 id = UUID.randomUUID()
                 updatedAt = Instant.parse("2026-10-11T09:00:00Z")
             }
+        }
+
+        val response = service.update(request(theme = UiTheme.DARK, sidebarCollapsed = true))
+
+        assertEquals(UiTheme.DARK, response.theme)
+        assertTrue(response.sidebarCollapsed)
+        assertTrue(response.persisted)
+        verify(userSettingsRepository).save(any())
+    }
+
+    @Test
+    fun `update replaces the existing row`() {
+        authenticateAs("ada")
+        val existing = stored(theme = UiTheme.LIGHT)
+        whenever(userSettingsRepository.findByOwnerUserId("ada")).thenReturn(existing)
+        whenever(userSettingsRepository.save(existing)).thenReturn(existing)
+
+        val response = service.update(request(theme = UiTheme.DARK, locale = UiLocale.ZH_CN))
+
+        assertEquals(UiTheme.DARK, existing.theme)
+        assertEquals(UiLocale.ZH_CN, existing.locale)
+        assertEquals(UiTheme.DARK, response.theme)
+        assertEquals("ada", existing.ownerUserId)
+    }
+
+    @Test
+    fun `update retries as a replacement when the first insert loses the unique owner race`() {
+        authenticateAs("ada")
+        val existing = stored(theme = UiTheme.SYSTEM)
+        whenever(userSettingsRepository.findByOwnerUserId("ada")).thenReturn(null, existing)
+        whenever(userSettingsRepository.save(any<UserSettingsEntity>()))
+            .thenThrow(DataIntegrityViolationException("duplicate owner"))
+            .thenReturn(existing)
+
+        val response = service.update(request(theme = UiTheme.LIGHT, reduceMotion = true))
+
+        assertEquals(UiTheme.LIGHT, existing.theme)
+        assertTrue(existing.reduceMotion)
+        assertEquals(UiTheme.LIGHT, response.theme)
+    }
+
+    @Test
+    fun `update rethrows the conflict when the raced row is still missing`() {
+        authenticateAs("ada")
+        whenever(userSettingsRepository.findByOwnerUserId("ada")).thenReturn(null)
+        whenever(userSettingsRepository.save(any<UserSettingsEntity>()))
+            .thenThrow(DataIntegrityViolationException("duplicate owner"))
+
+        assertFailsWith<DataIntegrityViolationException> {
+            service.update(request())
+        }
+    }
+
+    @Test
+    fun `get requires authentication`() {
+        SecurityContextHolder.clearContext()
+
+        val exception = assertFailsWith<SettingsException> { service.get() }
+
+        assertEquals(1002, exception.code)
+        assertEquals("AUTH-002", exception.responseType)
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.status)
+        verify(userSettingsRepository, never()).findByOwnerUserId(any())
+    }
+
+    @Test
+    fun `update rejects an anonymous caller`() {
+        SecurityContextHolder.getContext().authentication = AnonymousAuthenticationToken(
+            "key",
+            "anonymousUser",
+            AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"),
+        )
+
+        val exception = assertFailsWith<SettingsException> { service.update(request()) }
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.status)
+        verify(userSettingsRepository, never()).save(any())
+    }
+
+    @Test
+    fun `update rejects a blank principal name`() {
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken(
+            " ",
+            "n/a",
+            AuthorityUtils.createAuthorityList("ROLE_USER"),
+        )
+
+        assertFailsWith<SettingsException> { service.update(request()) }
+        verify(userSettingsRepository, never()).save(any())
+    }
+
+    private fun request(
+        theme: UiTheme = UiTheme.DARK,
+        locale: UiLocale = UiLocale.EN,
+        sidebarCollapsed: Boolean = false,
+        reduceMotion: Boolean = false,
+    ) = UserSettingsUpdateRequest().apply {
+        this.theme = theme
+        this.locale = locale
+        this.sidebarCollapsed = sidebarCollapsed
+        density = UiDensity.COMFORTABLE
+        this.reduceMotion = reduceMotion
+    }
+
+    private fun stored(theme: UiTheme) = UserSettingsEntity(
+        id = UUID.randomUUID(),
+        ownerUserId = "ada",
+        theme = theme,
+        locale = UiLocale.EN,
+        updatedAt = Instant.parse("2026-10-11T08:00:00Z"),
+    )
+
+    private fun authenticateAs(userId: String) {
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken(
+            userId,
+            "n/a",
+            AuthorityUtils.createAuthorityList("ROLE_USER"),
+        )
+    }
+}
