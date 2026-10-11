@@ -1,7 +1,7 @@
 package com.agentgo.starter
 
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
-import com.agentgo.starter.annotation.AgentGoLogApi
+import com.agentgo.commons.annotation.AgentGoLogApi
 import jakarta.servlet.http.HttpServletRequest
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
@@ -9,6 +9,7 @@ import org.aspectj.lang.annotation.Aspect
 import org.aspectj.lang.reflect.MethodSignature
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
+import org.springframework.stereotype.Component
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
@@ -21,6 +22,7 @@ import java.util.UUID
  * @version 0.1.0-SNAPSHOT
  */
 @Aspect
+@Component
 class AgentGoLogApiAspect {
     private val logger = LoggerFactory.getLogger(AgentGoLogApiAspect::class.java)
 
