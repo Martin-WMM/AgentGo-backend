@@ -11,7 +11,6 @@ import com.agentgo.settings.repository.UserSettingsRepository
 import com.agentgo.settings.security.SettingsUserIdResolver
 import com.agentgo.settings.support.NoOpPlatformTransactionManager
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,7 +74,7 @@ class UserSettingsServiceImplTest {
         whenever(userSettingsRepository.findByOwnerUserId("ada")).thenReturn(null)
         whenever(userSettingsRepository.save(any<UserSettingsEntity>())).thenAnswer { invocation ->
             invocation.getArgument<UserSettingsEntity>(0).apply {
-                id = UUID.randomUUID()
+                id = 1L
                 updatedAt = Instant.parse("2026-10-11T09:00:00Z")
             }
         }
@@ -183,7 +182,7 @@ class UserSettingsServiceImplTest {
     }
 
     private fun stored(theme: UiTheme) = UserSettingsEntity(
-        id = UUID.randomUUID(),
+        id = 2L,
         ownerUserId = "ada",
         theme = theme,
         locale = UiLocale.EN,

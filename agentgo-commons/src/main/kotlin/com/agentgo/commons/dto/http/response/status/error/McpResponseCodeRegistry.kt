@@ -9,8 +9,8 @@ object McpResponseCodeRegistry {
             "The requested MCP server was not found.",
         "MCP-002" to "MCP server request parameters are invalid." to
             "The MCP server request is invalid.",
-        "MCP-003" to "An MCP server with the same name already exists for the authenticated user." to
-            "An MCP server with this name already exists.",
+        "MCP-003" to "An MCP server with the same group, name, and creator already exists." to
+            "An MCP server with this group and name already exists.",
         "MCP-004" to "MCP server operation is not authorized." to
             "You do not have access to this MCP server.",
         "MCP-005" to "MCP server metadata is in an invalid state." to

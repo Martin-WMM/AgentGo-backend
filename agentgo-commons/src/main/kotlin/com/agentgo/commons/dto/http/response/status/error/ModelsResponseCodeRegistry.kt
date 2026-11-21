@@ -9,8 +9,8 @@ object ModelsResponseCodeRegistry {
             "The requested model was not found.",
         "MODEL-002" to "Model request parameters are invalid." to
             "The model request is invalid.",
-        "MODEL-003" to "A model with the same name already exists for the authenticated user." to
-            "A model with this name already exists.",
+        "MODEL-003" to "A model with the same group, name, and creator already exists." to
+            "A model with this group and name already exists.",
         "MODEL-004" to "Model operation is not authorized." to
             "You do not have access to this model.",
         "MODEL-005" to "Model metadata is in an invalid state." to

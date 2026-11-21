@@ -9,8 +9,8 @@ object PromptsResponseCodeRegistry {
             "The requested prompt template was not found.",
         "PROMPT-002" to "Prompt template request parameters are invalid." to
             "The prompt template request is invalid.",
-        "PROMPT-003" to "A prompt template with the same name already exists for this user." to
-            "A prompt template with this name already exists for this user.",
+        "PROMPT-003" to "A prompt template with the same group, name, and creator already exists." to
+            "A prompt template with this group, name, and creator already exists.",
         "PROMPT-004" to "Prompt template could not be rendered with the supplied variables." to
             "The prompt template could not be rendered.",
         "PROMPT-005" to "Prompt template operation is not authorized." to

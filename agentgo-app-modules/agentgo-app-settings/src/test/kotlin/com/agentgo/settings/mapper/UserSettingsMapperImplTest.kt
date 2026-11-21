@@ -6,7 +6,6 @@ import com.agentgo.dto.settings.UiTheme
 import com.agentgo.dto.settings.UserSettingsUpdateRequest
 import com.agentgo.settings.entity.UserSettingsEntity
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -41,7 +40,7 @@ class UserSettingsMapperImplTest {
     fun `to response marks a stored row as persisted`() {
         val updatedAt = Instant.parse("2026-10-11T08:00:00Z")
         val entity = UserSettingsEntity(
-            id = UUID.randomUUID(),
+            id = 1L,
             ownerUserId = "ada",
             theme = UiTheme.DARK,
             locale = UiLocale.ZH_CN,
