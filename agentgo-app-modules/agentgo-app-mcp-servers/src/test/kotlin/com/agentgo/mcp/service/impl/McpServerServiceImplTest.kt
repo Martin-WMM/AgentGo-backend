@@ -17,7 +17,6 @@ import com.agentgo.mcp.mapper.McpServerMapper
 import com.agentgo.mcp.repository.McpServerRepository
 import com.agentgo.mcp.security.AuthenticatedUserIdResolver
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -53,11 +52,11 @@ class McpServerServiceImplTest {
             name = request.name,
             endpointUrl = request.endpointUrl,
         )
-        val id = UUID.randomUUID()
+        val id = 1L
         val saved = entity.copy(id = id, createdAt = Instant.now(), updatedAt = Instant.now())
         val response = sampleResponse(id, request.name)
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
-        whenever(mcpServerRepository.existsByOwnerUserIdAndName("ada", "docs")).thenReturn(false)
+        whenever(mcpServerRepository.existsByGroupNameAndNameAndCreator("default", "docs", "ada")).thenReturn(false)
         whenever(mcpServerMapper.toEntity(eq("ada"), any())).thenReturn(entity)
         whenever(mcpServerRepository.save(entity)).thenReturn(saved)
         whenever(mcpServerMapper.toResponse(saved)).thenReturn(response)
@@ -88,7 +87,7 @@ class McpServerServiceImplTest {
     @Test
     fun `rejects duplicate name on create`() {
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
-        whenever(mcpServerRepository.existsByOwnerUserIdAndName("ada", "docs")).thenReturn(true)
+        whenever(mcpServerRepository.existsByGroupNameAndNameAndCreator("default", "docs", "ada")).thenReturn(true)
 
         assertFailsWith<DuplicateMcpServerNameException> {
             service.create(createRequest("docs", "https://mcp.example.com/mcp"))
@@ -108,7 +107,7 @@ class McpServerServiceImplTest {
 
     @Test
     fun `gets and lists only owner scoped servers`() {
-        val id = UUID.randomUUID()
+        val id = 2L
         val entity = McpServerEntity(
             id = id,
             ownerUserId = "ada",
@@ -130,7 +129,7 @@ class McpServerServiceImplTest {
 
     @Test
     fun `updates and deletes owned servers`() {
-        val id = UUID.randomUUID()
+        val id = 3L
         val entity = McpServerEntity(
             id = id,
             ownerUserId = "ada",
@@ -141,7 +140,7 @@ class McpServerServiceImplTest {
         val response = sampleResponse(id, "new")
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(mcpServerRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
-        whenever(mcpServerRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "new", id)).thenReturn(false)
+        whenever(mcpServerRepository.existsByGroupNameAndNameAndCreatorAndIdNot("default", "new", "ada", id)).thenReturn(false)
         whenever(mcpServerRepository.save(entity)).thenReturn(entity)
         whenever(mcpServerMapper.toResponse(entity)).thenReturn(response)
 
@@ -154,7 +153,7 @@ class McpServerServiceImplTest {
 
     @Test
     fun `treats missing owned server as not found`() {
-        val id = UUID.randomUUID()
+        val id = 4L
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(mcpServerRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(null)
 
@@ -167,8 +166,34 @@ class McpServerServiceImplTest {
     }
 
     @Test
+    fun `deleteAll removes every owned server`() {
+        val first = McpServerEntity(id = 8L, ownerUserId = "ada", name = "one", endpointUrl = "https://mcp.example.com/a")
+        val second = McpServerEntity(id = 9L, ownerUserId = "ada", name = "two", endpointUrl = "https://mcp.example.com/b")
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+        whenever(mcpServerRepository.findByIdAndOwnerUserId(8L, "ada")).thenReturn(first)
+        whenever(mcpServerRepository.findByIdAndOwnerUserId(9L, "ada")).thenReturn(second)
+
+        service.deleteAll(listOf(8L, 9L))
+
+        verify(mcpServerRepository).delete(first)
+        verify(mcpServerRepository).delete(second)
+    }
+
+    @Test
+    fun `deleteAll deletes nothing when any server is missing or the list is empty`() {
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+        whenever(mcpServerRepository.findByIdAndOwnerUserId(8L, "ada"))
+            .thenReturn(McpServerEntity(id = 8L, ownerUserId = "ada", endpointUrl = "https://mcp.example.com/a"))
+        whenever(mcpServerRepository.findByIdAndOwnerUserId(10L, "ada")).thenReturn(null)
+
+        assertFailsWith<McpServerNotFoundException> { service.deleteAll(listOf(8L, 10L)) }
+        assertFailsWith<InvalidMcpServerRequestException> { service.deleteAll(emptyList()) }
+        verify(mcpServerRepository, never()).delete(any<McpServerEntity>())
+    }
+
+    @Test
     fun `probe refreshes discovery cache on success`() {
-        val id = UUID.randomUUID()
+        val id = 5L
         val entity = McpServerEntity(
             id = id,
             ownerUserId = "ada",
@@ -199,7 +224,7 @@ class McpServerServiceImplTest {
 
     @Test
     fun `probe marks error status when streamable http handshake fails`() {
-        val id = UUID.randomUUID()
+        val id = 6L
         val entity = McpServerEntity(
             id = id,
             ownerUserId = "ada",
@@ -234,7 +259,7 @@ class McpServerServiceImplTest {
             enabled = true
         }
 
-    private fun sampleResponse(id: UUID, name: String): McpServerResponse =
+    private fun sampleResponse(id: Long, name: String): McpServerResponse =
         McpServerResponse(
             id = id,
             name = name,
@@ -252,7 +277,7 @@ class McpServerServiceImplTest {
         )
 
     private fun McpServerEntity.copy(
-        id: UUID? = this.id,
+        id: Long? = this.id,
         createdAt: Instant? = this.createdAt,
         updatedAt: Instant? = this.updatedAt,
     ): McpServerEntity =

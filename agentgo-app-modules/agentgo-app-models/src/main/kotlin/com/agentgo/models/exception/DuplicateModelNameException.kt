@@ -7,5 +7,5 @@ class DuplicateModelNameException : ModelException(
     code = 8003,
     responseType = "MODEL-003",
     status = HttpStatus.CONFLICT,
-    message = "A model with this name already exists.",
+    message = "A model with this group and name already exists.",
 )

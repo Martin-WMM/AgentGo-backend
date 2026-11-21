@@ -1,5 +1,6 @@
 package com.agentgo.mcp.controller
 
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.status.success.McpResponseCodeRegistry
 import com.agentgo.dto.mcp.McpAuthType
 import com.agentgo.dto.mcp.McpServerCreateRequest
@@ -9,7 +10,6 @@ import com.agentgo.dto.mcp.McpServerUpdateRequest
 import com.agentgo.dto.mcp.McpTransport
 import com.agentgo.mcp.service.McpServerService
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -24,7 +24,7 @@ class McpServerControllerTest {
 
     @Test
     fun `delegates crud and probe operations and wraps success codes`() {
-        val id = UUID.randomUUID()
+        val id = 1L
         val createRequest = McpServerCreateRequest().apply {
             name = "docs"
             endpointUrl = "https://mcp.example.com/mcp"
@@ -61,7 +61,18 @@ class McpServerControllerTest {
         verify(mcpServerService).delete(id)
     }
 
-    private fun sampleResponse(id: UUID): McpServerResponse =
+    @Test
+    fun `deleteAll returns no content and delegates ids`() {
+        val request = BatchIdsRequest().apply { ids = listOf(4L, 5L) }
+
+        val deleted = controller.deleteAll(request)
+
+        assertEquals(HttpStatus.NO_CONTENT, deleted.statusCode)
+        assertNull(deleted.body)
+        verify(mcpServerService).deleteAll(listOf(4L, 5L))
+    }
+
+    private fun sampleResponse(id: Long): McpServerResponse =
         McpServerResponse(
             id = id,
             name = "docs",

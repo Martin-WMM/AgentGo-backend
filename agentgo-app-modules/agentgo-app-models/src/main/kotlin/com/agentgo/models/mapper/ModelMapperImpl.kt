@@ -14,6 +14,7 @@ class ModelMapperImpl : ModelMapper {
     override fun toResponse(entity: ModelEntity): ModelResponse =
         ModelResponse(
             id = requireNotNull(entity.id) { "Persisted model must have an identifier." },
+            groupName = entity.groupName,
             name = entity.name,
             provider = entity.provider,
             type = entity.type,
@@ -26,6 +27,7 @@ class ModelMapperImpl : ModelMapper {
     override fun toEntity(ownerUserId: String, request: ModelCreateRequest): ModelEntity =
         ModelEntity(
             ownerUserId = ownerUserId,
+            groupName = request.groupName,
             name = request.name,
             provider = request.provider,
             type = checkNotNull(request.type) { "Model type must be normalized before mapping." },
@@ -34,6 +36,7 @@ class ModelMapperImpl : ModelMapper {
         )
 
     override fun applyUpdate(entity: ModelEntity, request: ModelUpdateRequest) {
+        entity.groupName = request.groupName
         entity.name = request.name
         entity.provider = request.provider
         entity.type = checkNotNull(request.type) { "Model type must be normalized before mapping." }

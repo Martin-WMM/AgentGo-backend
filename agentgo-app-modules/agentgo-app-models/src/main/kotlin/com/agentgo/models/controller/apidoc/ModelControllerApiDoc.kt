@@ -1,6 +1,7 @@
 package com.agentgo.models.controller.apidoc
 
 import com.agentgo.commons.api.ApiPaths
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.dto.models.ModelCreateRequest
 import com.agentgo.dto.models.ModelResponse
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam
     name = "Models",
     description = "Versioned user-owned AI model configurations at /api/v1/models. " +
         "Every model belongs to the authenticated user; operations never cross owners and " +
-        "clients must not send a user id. name is unique per owner (HTTP 409, MODEL-003). " +
+        "clients must not send a user id. groupName, name, and creator are unique (HTTP 409, MODEL-003). " +
         "type is LLM, MULTIMODAL, EMBEDDING, ASR, TTS, SPEECH2SPEECH, or OTHER. " +
         "provider is an upstream identifier such as openai or ollama. configuration is a " +
         "provider-specific JSON object. description is optional and at most 2000 characters. " +
@@ -45,7 +45,7 @@ interface ModelControllerApiDoc {
     @Operation(
         summary = "Create a model for the authenticated user",
         description = "Stores a model configuration owned by the caller. Returns 8201 MODEL-CREATED. " +
-            "A blank or oversized name or provider returns MODEL-002. A duplicate name returns MODEL-003.",
+            "A blank or oversized name or provider returns MODEL-002. A duplicate group and name returns MODEL-003.",
     )
     @ApiResponses(
         value = [
@@ -73,7 +73,7 @@ interface ModelControllerApiDoc {
     @GetMapping("/{id}")
     fun get(
         @Parameter(description = "Model identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): CommonHttpResponse<ModelResponse>
 
     @Operation(
@@ -110,7 +110,7 @@ interface ModelControllerApiDoc {
     @PutMapping("/{id}")
     fun update(
         @Parameter(description = "Model identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
         @RequestBody request: ModelUpdateRequest,
     ): CommonHttpResponse<ModelResponse>
 
@@ -129,6 +129,23 @@ interface ModelControllerApiDoc {
     @DeleteMapping("/{id}")
     fun delete(
         @Parameter(description = "Model identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): ResponseEntity<Void>
+
+    @Operation(
+        summary = "Delete models owned by the authenticated user",
+        description = "Deletes every listed model in one transaction and returns HTTP 204. " +
+            "An empty list, more than 100 ids, a non-positive id, or any missing id rejects the " +
+            "request and deletes nothing. Another user's id is not found.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Models deleted"),
+            ApiResponse(responseCode = "400", description = "Invalid id list (MODEL-002)"),
+            ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
+            ApiResponse(responseCode = "404", description = "Model not found (MODEL-001)"),
+        ],
+    )
+    @PostMapping("/batch-delete")
+    fun deleteAll(@RequestBody request: BatchIdsRequest): ResponseEntity<Void>
 }
