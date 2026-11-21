@@ -238,3 +238,133 @@ class A2aAgentServiceImplTest {
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(a2aAgentRepository.findByIdAndOwnerUserId(21L, "ada")).thenReturn(first)
         whenever(a2aAgentRepository.findByIdAndOwnerUserId(22L, "ada")).thenReturn(second)
+
+        service.deleteAll(listOf(21L, 22L, 21L))
+
+        verify(a2aAgentRepository).delete(first)
+        verify(a2aAgentRepository).delete(second)
+    }
+
+    @Test
+    fun `deleteAll deletes nothing when any agent is missing or the list is empty`() {
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+        whenever(a2aAgentRepository.findByIdAndOwnerUserId(21L, "ada")).thenReturn(persistedEntity(21L))
+        whenever(a2aAgentRepository.findByIdAndOwnerUserId(29L, "ada")).thenReturn(null)
+
+        assertFailsWith<A2aAgentNotFoundException> { service.deleteAll(listOf(21L, 29L)) }
+        assertFailsWith<InvalidA2aAgentRequestException> { service.deleteAll(emptyList()) }
+        verify(a2aAgentRepository, never()).delete(any<A2aAgentEntity>())
+    }
+
+    @Test
+    fun `fails when the read transaction returns null`() {
+        val reader = serviceWith(NullResultTransactionManager())
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+
+        val exception = assertFailsWith<IllegalStateException> { reader.get(1L) }
+
+        assertEquals("A2A read transaction returned null", exception.message)
+    }
+
+    @Test
+    fun `fails when the write transaction returns null`() {
+        val writer = serviceWith(NullResultTransactionManager())
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+        whenever(a2aAgentRequestNormalizer.normalizeCreate(any())).thenReturn(sampleAgent())
+
+        val exception = assertFailsWith<IllegalStateException> {
+            writer.create(A2aAgentCreateRequest())
+        }
+
+        assertEquals("A2A write transaction returned null", exception.message)
+    }
+
+    private fun serviceWith(transactionManager: PlatformTransactionManager): A2aAgentServiceImpl =
+        A2aAgentServiceImpl(
+            a2aAgentRepository,
+            a2aAgentMapper,
+            authenticatedUserIdResolver,
+            a2aAgentRequestNormalizer,
+            transactionManager,
+        )
+
+    private fun stubApplyUpdate() {
+        whenever(a2aAgentMapper.applyUpdate(any(), any())).thenAnswer { invocation ->
+            val entity = invocation.getArgument<A2aAgentEntity>(0)
+            val agent = invocation.getArgument<NormalizedA2aAgent>(1)
+            entity.cardUrl = agent.cardUrl
+            entity.groupName = agent.groupName
+            entity.name = agent.name
+            entity.description = agent.description
+            entity.enabled = agent.enabled
+            entity.status = agent.status
+            null
+        }
+    }
+
+    private fun sampleAgent(
+        description: String? = "Handles invoices",
+        enabled: Boolean = true,
+        status: A2aAgentStatus = A2aAgentStatus.UNKNOWN,
+    ): NormalizedA2aAgent =
+        NormalizedA2aAgent(
+            cardUrl = "https://agent.example.com/card",
+            groupName = "billing",
+            name = "billing-agent",
+            description = description,
+            tags = listOf("billing"),
+            metadata = mapOf("team" to "ops"),
+            enabled = enabled,
+            status = status,
+        )
+
+    private fun persistedEntity(id: Long): A2aAgentEntity =
+        A2aAgentEntity(
+            id = id,
+            ownerUserId = "ada",
+            cardUrl = "https://agent.example.com/card",
+            groupName = "billing",
+            name = "billing-agent",
+            createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+            updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
+        )
+
+    private fun sampleResponse(id: Long): A2aAgentResponse =
+        A2aAgentResponse(
+            id = id,
+            cardUrl = "https://agent.example.com/card",
+            groupName = "billing",
+            name = "billing-agent",
+            description = "Handles invoices",
+            tags = listOf("billing"),
+            metadata = mapOf("team" to "ops"),
+            descriptionVector = List(64) { 0.0 },
+            enabled = true,
+            status = A2aAgentStatus.UNKNOWN,
+            createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+            updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
+        )
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus =
+            SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
+
+    private class NullResultTransactionManager : CallbackPreferringPlatformTransactionManager {
+        override fun <T> execute(definition: TransactionDefinition?, callback: TransactionCallback<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return null as T
+        }
+
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus =
+            SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
+}
