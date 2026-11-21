@@ -14,6 +14,7 @@ class WorkspaceMapperImpl : WorkspaceMapper {
     override fun toResponse(entity: WorkspaceEntity): WorkspaceResponse =
         WorkspaceResponse(
             id = requireNotNull(entity.id) { "Persisted workspace must have an identifier." },
+            groupName = entity.groupName,
             name = entity.name,
             description = entity.description,
             metadata = metadataWith(readColor(entity.metadata?.color)),
@@ -24,12 +25,14 @@ class WorkspaceMapperImpl : WorkspaceMapper {
     override fun toEntity(ownerUserId: String, request: WorkspaceCreateRequest): WorkspaceEntity =
         WorkspaceEntity(
             ownerUserId = ownerUserId.trim(),
+            groupName = normalizeGroup(request.groupName),
             name = request.name.trim(),
             description = normalizeDescription(request.description),
             metadata = metadataWith(writeColor(request.metadata?.color)),
         )
 
     override fun applyUpdate(entity: WorkspaceEntity, request: WorkspaceUpdateRequest) {
+        entity.groupName = normalizeGroup(request.groupName)
         entity.name = request.name.trim()
         entity.description = normalizeDescription(request.description)
         if (request.metadata != null) {
@@ -38,6 +41,8 @@ class WorkspaceMapperImpl : WorkspaceMapper {
             entity.metadata = metadataWith(WorkspaceColors.DEFAULT)
         }
     }
+
+    private fun normalizeGroup(value: String): String = value.trim().ifEmpty { "default" }
 
     private fun normalizeDescription(description: String?): String? =
         description?.trim()?.takeIf { it.isNotEmpty() }

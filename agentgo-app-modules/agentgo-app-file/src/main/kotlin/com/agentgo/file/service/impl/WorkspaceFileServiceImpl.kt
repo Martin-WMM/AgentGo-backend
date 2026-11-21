@@ -1,6 +1,7 @@
 package com.agentgo.file.service.impl
 
 import com.agentgo.commons.api.ApiPaths
+import com.agentgo.commons.dto.http.request.BatchIds
 import com.agentgo.dto.file.FileMetadataResponse
 import com.agentgo.file.entity.FileEntity
 import com.agentgo.file.exception.EmptyFileException
@@ -19,7 +20,6 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Base64
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
@@ -106,7 +106,20 @@ class WorkspaceFileServiceImpl(
         }
     }
 
-    override fun hasFilesInWorkspace(workspaceId: UUID): Boolean =
+    override fun deleteWorkspaces(paths: List<String>) {
+        val ownerId = currentOwnerId()
+        if (paths.isEmpty() || paths.size > BatchIds.MAX_SIZE) {
+            throw InvalidWorkspacePathException()
+        }
+        val normalized = paths.map(::normalizeWorkspacePath).distinct()
+        storageTransactions.write {
+            val entities = normalized.map { path -> findFile(workspaceKey(ownerId, path)) }
+            entities.forEach { fileRepository.delete(it) }
+            storageTransactions.deleteObjectsAfterCommit(entities.map { it.objectKey })
+        }
+    }
+
+    override fun hasFilesInWorkspace(workspaceId: Long): Boolean =
         storageTransactions.readOnly {
             val ownerId = currentOwnerId()
             val prefix = "${workspacePrefix(ownerId)}$workspaceId/"

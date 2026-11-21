@@ -1,6 +1,7 @@
 package com.agentgo.file.controller.apidoc
 
 import com.agentgo.commons.api.ApiPaths
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.dto.workspace.WorkspaceCreateRequest
 import com.agentgo.dto.workspace.WorkspaceResponse
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -37,14 +37,14 @@ import org.springframework.web.bind.annotation.RequestMapping
         "most 2000 characters. List returns newest updates first. Delete returns HTTP 204 and " +
         "fails with WORKSPACE-004 when the workspace still contains files. Success codes are " +
         "3200 through 3204. WORKSPACE-001 is not found, WORKSPACE-002 is an invalid request, " +
-        "and WORKSPACE-003 is a duplicate name. Missing authentication uses AUTH-002.",
+        "and WORKSPACE-003 is a duplicate group and name. Missing authentication uses AUTH-002.",
 )
 @RequestMapping(ApiPaths.V1_WORKSPACES)
 interface WorkspaceControllerApiDoc {
     @Operation(
         summary = "Create a workspace for the authenticated user",
         description = "Stores a workspace owned by the caller. A missing metadata.color becomes #1D4ED8. " +
-            "Returns 3201 WORKSPACE-CREATED. A duplicate name returns WORKSPACE-003.",
+            "Returns 3201 WORKSPACE-CREATED. A duplicate group and name returns WORKSPACE-003.",
     )
     @ApiResponses(
         value = [
@@ -72,7 +72,7 @@ interface WorkspaceControllerApiDoc {
     @GetMapping("/{id}")
     fun get(
         @Parameter(description = "Workspace identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable id: UUID,
+        @PathVariable id: Long,
     ): CommonHttpResponse<WorkspaceResponse>
 
     @Operation(
@@ -105,7 +105,7 @@ interface WorkspaceControllerApiDoc {
     @PutMapping("/{id}")
     fun update(
         @Parameter(description = "Workspace identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable id: UUID,
+        @PathVariable id: Long,
         @Valid @RequestBody request: WorkspaceUpdateRequest,
     ): CommonHttpResponse<WorkspaceResponse>
 
@@ -126,6 +126,24 @@ interface WorkspaceControllerApiDoc {
     @DeleteMapping("/{id}")
     fun delete(
         @Parameter(description = "Workspace identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable id: UUID,
+        @PathVariable id: Long,
     ): ResponseEntity<Void>
+
+    @Operation(
+        summary = "Delete empty workspaces owned by the authenticated user",
+        description = "Deletes every listed empty workspace in one transaction and returns HTTP 204. " +
+            "An empty list, more than 100 ids, a non-positive id, any missing id, or any workspace " +
+            "that still contains files rejects the request and deletes nothing.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Workspaces deleted"),
+            ApiResponse(responseCode = "400", description = "Invalid id list (WORKSPACE-002)"),
+            ApiResponse(responseCode = "401", description = "Authentication required"),
+            ApiResponse(responseCode = "404", description = "Workspace not found"),
+            ApiResponse(responseCode = "409", description = "A workspace still contains files"),
+        ],
+    )
+    @PostMapping("/batch-delete")
+    fun deleteAll(@RequestBody request: BatchIdsRequest): ResponseEntity<Void>
 }
