@@ -238,3 +238,130 @@ class A2aAgentRequestNormalizerTest {
 
     @Test
     fun `rejects metadata nested too deeply`() {
+        val exception = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = nestedMaps(5) })
+        }
+
+        assertEquals("A2A agent metadata is nested too deeply.", exception.message)
+    }
+
+    @Test
+    fun `rejects metadata with too many entries`() {
+        val exception = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(
+                validCreate().apply { metadata = (1..33).associate { index -> "k$index" to "v" } },
+            )
+        }
+
+        assertEquals("The A2A agent metadata supports at most 32 entries.", exception.message)
+    }
+
+    @Test
+    fun `rejects metadata keys that are blank too long or null`() {
+        val blank = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("   " to "v") })
+        }
+        val tooLong = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("k".repeat(65) to "v") })
+        }
+        val nullKey = assertFailsWith<InvalidA2aAgentRequestException> {
+            val metadata = HashMap<String?, Any?>()
+            metadata[null] = "v"
+            @Suppress("UNCHECKED_CAST")
+            normalizer.normalizeCreate(validCreate().apply { this.metadata = metadata as Map<String, Any?> })
+        }
+
+        assertEquals("A2A agent metadata keys must be 1..64 characters.", blank.message)
+        assertEquals(blank.message, tooLong.message)
+        assertEquals(blank.message, nullKey.message)
+    }
+
+    @Test
+    fun `rejects metadata strings longer than 2000 characters`() {
+        val exception = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("note" to "v".repeat(2001)) })
+        }
+
+        assertEquals("A2A agent metadata strings must be at most 2000 characters.", exception.message)
+    }
+
+    @Test
+    fun `rejects non finite metadata numbers`() {
+        val notANumber = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("n" to Double.NaN) })
+        }
+        val infinite = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("n" to Double.POSITIVE_INFINITY) })
+        }
+
+        assertEquals("A2A agent metadata numbers must be finite.", notANumber.message)
+        assertEquals(notANumber.message, infinite.message)
+    }
+
+    @Test
+    fun `rejects metadata arrays longer than 32 entries`() {
+        val exception = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("items" to List(33) { "item" }) })
+        }
+
+        assertEquals("A2A agent metadata arrays support at most 32 entries.", exception.message)
+    }
+
+    @Test
+    fun `rejects unsupported metadata value types`() {
+        val objectValue = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(validCreate().apply { metadata = mapOf("when" to Instant.EPOCH) })
+        }
+        val nestedValue = assertFailsWith<InvalidA2aAgentRequestException> {
+            normalizer.normalizeCreate(
+                validCreate().apply { metadata = mapOf("items" to listOf(Instant.parse("2026-01-01T00:00:00Z"))) },
+            )
+        }
+
+        assertEquals("A2A agent metadata values must be JSON scalars, arrays, or objects.", objectValue.message)
+        assertEquals(objectValue.message, nestedValue.message)
+    }
+
+    @Test
+    fun `treats missing tags and metadata as empty`() {
+        val request = validCreate()
+        setField(request, "tags", null)
+        setField(request, "metadata", null)
+
+        val normalized = normalizer.normalizeCreate(request)
+
+        assertEquals(emptyList(), normalized.tags)
+        assertEquals(emptyMap(), normalized.metadata)
+    }
+
+    private fun validCreate(): A2aAgentCreateRequest =
+        A2aAgentCreateRequest().apply {
+            cardUrl = "https://agent.example.com/card"
+            groupName = "billing"
+            name = "billing-agent"
+            description = "Handles invoices"
+            enabled = true
+            status = A2aAgentStatus.UNKNOWN
+        }
+
+    private fun validUpdate(): A2aAgentUpdateRequest =
+        A2aAgentUpdateRequest().apply {
+            cardUrl = "https://agent.example.com/card"
+            groupName = "billing"
+            name = "billing-agent"
+        }
+
+    private fun nestedMaps(levels: Int): Map<String, Any?> {
+        var current: Map<String, Any?> = mapOf("leaf" to "value")
+        repeat(levels - 1) {
+            current = mapOf("child" to current)
+        }
+        return current
+    }
+
+    private fun setField(target: Any, name: String, value: Any?) {
+        val field = target.javaClass.getDeclaredField(name)
+        field.isAccessible = true
+        field.set(target, value)
+    }
+}
