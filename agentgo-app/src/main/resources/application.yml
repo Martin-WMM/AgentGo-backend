@@ -1,6 +1,17 @@
+server:
+  tomcat:
+    # Keep the connector limit above the multipart file limit so an oversized upload
+    # reaches application error handling instead of being closed by Tomcat.
+    max-http-form-post-size: ${AGENTGO_FILE_MAX_REQUEST_SIZE:110MB}
+    max-swallow-size: ${AGENTGO_FILE_MAX_REQUEST_SIZE:110MB}
+
 spring:
   application:
     name: agentgo-backend
+  servlet:
+    multipart:
+      max-file-size: ${AGENTGO_FILE_MAX_SIZE:100MB}
+      max-request-size: ${AGENTGO_FILE_MAX_REQUEST_SIZE:110MB}
   security:
     oauth2:
       client:
@@ -15,9 +26,9 @@ spring:
         provider:
           authentik:
             authorization-uri: ${AGENTGO_OIDC_AUTHORIZATION_URI:http://localhost:9000/application/o/authorize/}
-            token-uri: ${AGENTGO_OIDC_TOKEN_URI:http://host.docker.internal:9000/application/o/token/}
-            jwk-set-uri: ${AGENTGO_OIDC_JWK_SET_URI:http://host.docker.internal:9000/application/o/agentgo/jwks/}
-            user-info-uri: ${AGENTGO_OIDC_USER_INFO_URI:http://host.docker.internal:9000/application/o/userinfo/}
+            token-uri: ${AGENTGO_OIDC_TOKEN_URI:http://localhost:9000/application/o/token/}
+            jwk-set-uri: ${AGENTGO_OIDC_JWK_SET_URI:http://localhost:9000/application/o/agentgo/jwks/}
+            user-info-uri: ${AGENTGO_OIDC_USER_INFO_URI:http://localhost:9000/application/o/userinfo/}
             user-name-attribute: preferred_username
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/agentgo}
@@ -71,12 +82,15 @@ agentgo:
       server-description: ${AGENTGO_OPENAPI_SERVER_DESCRIPTION:}
   auth:
     ui-base-url: ${AGENTGO_UI_BASE_URL:http://localhost:5173}
+    oidc-client-id: ${AGENTGO_OIDC_CLIENT_ID:agentgo}
     authentik-api-base-url: ${AGENTGO_AUTHENTIK_API_BASE_URL:http://localhost:9000}
     authentik-api-token: ${AGENTGO_AUTHENTIK_API_TOKEN:}
     authentik-browser-base-url: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:http://localhost:9000}
     authentik-application-slug: ${AGENTGO_AUTHENTIK_APPLICATION_SLUG:agentgo}
   file:
-    minio-endpoint: ${MINIO_ENDPOINT:http://localhost:9001}
+    # Prefer 127.0.0.1 on Windows: localhost can resolve to ::1 and hang while MinIO listens on IPv4.
+    minio-endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9001}
     minio-access-key: ${MINIO_ACCESS_KEY:minioadmin}
     minio-secret-key: ${MINIO_SECRET_KEY:local-minio-password-change-me}
     bucket-name: ${MINIO_BUCKET:agentgo-bucket}
+    max-file-size-bytes: ${AGENTGO_FILE_MAX_SIZE_BYTES:104857600}

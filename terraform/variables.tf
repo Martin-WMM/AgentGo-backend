@@ -37,7 +37,78 @@ variable "redirect_uris" {
       redirect_uri_type = "authorization"
     },
     {
+      url               = "http://localhost:20082/login/oauth2/code/authentik"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+    },
+    {
       url               = "http://localhost:5173"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:5173/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:5173/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:20080"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:20080/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://localhost:20080/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    # TEST gateway (DEPLOY_HOST IP or DNS). Override in tfvars when the host changes.
+    {
+      url               = "http://124.174.118.184:28080/backend/login/oauth2/code/authentik"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/backend/login/oauth2/code/authentik"
+      matching_mode     = "strict"
+      redirect_uri_type = "authorization"
+    },
+    {
+      url               = "http://124.174.118.184:28080/ui"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://124.174.118.184:28080/ui/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://124.174.118.184:28080/ui/?signedOut=1"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/ui"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/ui/"
+      matching_mode     = "strict"
+      redirect_uri_type = "logout"
+    },
+    {
+      url               = "http://www.agentgo.agent.com:28080/ui/?signedOut=1"
       matching_mode     = "strict"
       redirect_uri_type = "logout"
     }
@@ -55,4 +126,42 @@ variable "client_secret" {
   type        = string
   sensitive   = true
   default     = null
+}
+
+variable "ui_base_url" {
+  description = "Public base URL of the AgentGo UI used for Authentik launch metadata."
+  type        = string
+  default     = "http://localhost:5173"
+}
+
+variable "minio_server" {
+  description = "MinIO S3 API host:port, for example 127.0.0.1:20910."
+  type        = string
+  default     = "127.0.0.1:9000"
+}
+
+variable "minio_user" {
+  description = "MinIO root or admin access key."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "minio_password" {
+  description = "MinIO root or admin secret key."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "minio_ssl" {
+  description = "Whether the MinIO endpoint uses TLS."
+  type        = bool
+  default     = false
+}
+
+variable "minio_bucket" {
+  description = "Application bucket created for AgentGo file storage."
+  type        = string
+  default     = "agentgo-bucket"
 }

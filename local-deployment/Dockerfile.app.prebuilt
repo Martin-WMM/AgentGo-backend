@@ -1,0 +1,9 @@
+# Local Compose image from a host-built bootJar (avoids in-container plugin downloads).
+FROM eclipse-temurin:25-jre
+
+WORKDIR /app
+COPY agentgo-app.jar /app/agentgo-app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app/agentgo-app.jar"]

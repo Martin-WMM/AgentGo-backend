@@ -50,20 +50,10 @@ resource "authentik_flow_stage_binding" "agentgo_invalidation_logout" {
   order  = 0
 }
 
-# After the session ends, return to the UI. The UI starts a new OIDC login, so a
-# successful sign-in comes back to the UI instead of Authentik's own home page.
-resource "authentik_stage_redirect" "agentgo_logout_redirect" {
-  name          = "AgentGo Logout Redirect"
-  mode          = "static"
-  target_static = "http://localhost:5173"
-  keep_context  = false
-}
-
-resource "authentik_flow_stage_binding" "agentgo_invalidation_redirect" {
-  target = authentik_flow.agentgo_invalidation.uuid
-  stage  = authentik_stage_redirect.agentgo_logout_redirect.id
-  order  = 10
-}
+# Do not bind a static RedirectStage here. Authentik appends SessionEndStage on
+# RP-initiated logout and honors post_logout_redirect_uri from the backend
+# (dev :5173, local :20080, test gateway /ui). A static redirect to one UI URL
+# would break the other environments.
 
 resource "authentik_stage_password" "agentgo_password" {
   name     = "AgentGo Password"

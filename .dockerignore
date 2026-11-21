@@ -17,8 +17,8 @@ gradlew.bat
 **/out/
 
 # Local deployment overrides and secrets
-local-deployments/.env
-local-deployments/*.override.yml
+local-deployment/.env
+local-deployment/*.override.yml
 
 # Documentation not required for the image build
 AGENTS.md

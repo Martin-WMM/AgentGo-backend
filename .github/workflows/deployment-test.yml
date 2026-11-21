@@ -50,7 +50,7 @@ jobs:
         if: steps.image-check.outputs.exists != 'true'
         run: |
           set -euo pipefail
-          docker build -f local-deployments/Dockerfile.app --tag "$IMAGE_NAME:$IMAGE_TAG" .
+          docker build -f local-deployment/Dockerfile.app --tag "$IMAGE_NAME:$IMAGE_TAG" .
           docker push "$IMAGE_NAME:$IMAGE_TAG"
 
       - name: Prepare deployment SSH credentials
@@ -87,11 +87,24 @@ jobs:
           set -euo pipefail
           mkdir -p "$DEPLOY_PATH/agentgo-backend-deployment"
           compose_file="$DEPLOY_PATH/docker-compose.yml"
-          if [[ ! -s "$compose_file" ]]; then printf '%s\n' 'include:' > "$compose_file"; fi
-          grep -Fqx '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml' "$compose_file" || \
-            printf '%s\n' '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml' >> "$compose_file"
-          grep -Fqx '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-authentik.yml' "$compose_file" || \
-            printf '%s\n' '  - path: ./agentgo-backend-deployment/docker-compose-agentgo-authentik.yml' >> "$compose_file"
+          include_line='  - path: ./agentgo-backend-deployment/docker-compose-agentgo-backend.yml'
+          if [[ ! -s "$compose_file" ]]; then
+            printf '%s\n' 'include:' "$include_line" > "$compose_file"
+          elif grep -Fqx "$include_line" "$compose_file"; then
+            :
+          elif grep -q '^include:' "$compose_file"; then
+            tmp="$(mktemp)"
+            awk -v line="$include_line" '
+              BEGIN { inserted=0 }
+              /^include:/ { print; print line; inserted=1; next }
+              { print }
+              END { if (!inserted) { print "include:"; print line } }
+            ' "$compose_file" > "$tmp"
+            mv "$tmp" "$compose_file"
+          else
+            echo "Shared compose file exists without an include: block; refusing to append." >&2
+            exit 1
+          fi
           REMOTE
           rsync -az --delete -e "ssh -i $KEY_FILE -p $DEPLOY_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS_FILE" \
             agentgo-backend-deployment/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/agentgo-backend-deployment/"
@@ -110,7 +123,7 @@ jobs:
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
           if ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker image inspect '$IMAGE_NAME:$IMAGE_TAG' >/dev/null 2>&1"; then echo 'exists=true' >> "$GITHUB_OUTPUT"; else echo 'exists=false' >> "$GITHUB_OUTPUT"; fi
 
-      - name: Pull image and start TEST service
+      - name: Transfer image and start TEST service
         id: deploy
         shell: bash
         env:
@@ -118,29 +131,60 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DEPLOY_UI_BASE_URL: http://${{ secrets.DEPLOY_HOST }}:20081
           DEPLOY_POSTGRES_PASSWORD: ${{ secrets.AGENTGO_POSTGRES_PASSWORD }}
-          AUTHENTIK_SECRET_KEY: ${{ secrets.AUTHENTIK_SECRET_KEY }}
-          AUTHENTIK_POSTGRES_PASSWORD: ${{ secrets.AUTHENTIK_POSTGRES_PASSWORD }}
           KEY_FILE: ${{ steps.ssh.outputs.key_file }}
           KNOWN_HOSTS_FILE: ${{ steps.ssh.outputs.known_hosts_file }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SERVER_IMAGE_EXISTS: ${{ steps.server-image-check.outputs.exists }}
         run: |
           set -euo pipefail
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
-          if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GITHUB_ACTOR' --password-stdin"; fi
-          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' SERVER_IMAGE_EXISTS='$SERVER_IMAGE_EXISTS' DEPLOY_UI_BASE_URL='$DEPLOY_UI_BASE_URL' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' AUTHENTIK_SECRET_KEY='$AUTHENTIK_SECRET_KEY' AUTHENTIK_POSTGRES_PASSWORD='$AUTHENTIK_POSTGRES_PASSWORD' DEPLOY_HOST='$DEPLOY_HOST' bash -s" <<'REMOTE'
+          # Avoid slow/unreliable GHCR pulls on the TEST host: stream the runner image over SSH.
+          if [[ "$SERVER_IMAGE_EXISTS" != true ]]; then
+            if ! docker image inspect "$IMAGE_NAME:$IMAGE_TAG" >/dev/null 2>&1; then
+              docker pull "$IMAGE_NAME:$IMAGE_TAG"
+            fi
+            docker save "$IMAGE_NAME:$IMAGE_TAG" | gzip -1 | ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" 'gzip -d | docker load'
+          fi
+          # Public browser URLs use DEPLOY_HOST IP + gateway :28080 path map (/ui, /backend, Authentik at /).
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' IMAGE_TAG='$IMAGE_TAG' DEPLOY_HOST='$DEPLOY_HOST' DEPLOY_POSTGRES_PASSWORD='$DEPLOY_POSTGRES_PASSWORD' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "$DEPLOY_PATH"
-          if [[ -f .env ]]; then grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AUTHENTIK_SECRET_KEY|AUTHENTIK_POSTGRES_PASSWORD|AGENTGO_OIDC_.*|AGENTGO_AUTHENTIK_BROWSER_BASE_URL)=' .env > .env.next || true; else : > .env.next; fi
-          printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$DEPLOY_UI_BASE_URL" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
-          printf 'AUTHENTIK_SECRET_KEY=%s\nAUTHENTIK_POSTGRES_PASSWORD=%s\n' "$AUTHENTIK_SECRET_KEY" "$AUTHENTIK_POSTGRES_PASSWORD" >> .env.next
-          printf 'AGENTGO_OIDC_AUTHORIZATION_URI=http://%s:20083/application/o/authorize/\nAGENTGO_OIDC_TOKEN_URI=http://%s:20083/application/o/token/\nAGENTGO_OIDC_JWK_SET_URI=http://%s:20083/application/o/agentgo/jwks/\nAGENTGO_OIDC_USER_INFO_URI=http://%s:20083/application/o/userinfo/\nAGENTGO_AUTHENTIK_BROWSER_BASE_URL=http://%s:20083\n' "$DEPLOY_HOST" "$DEPLOY_HOST" "$DEPLOY_HOST" "$DEPLOY_HOST" "$DEPLOY_HOST" >> .env.next
+          gateway="http://${DEPLOY_HOST}:28080"
+          # Keep host Authentik (:20900) and gateway (:28080). Do not rewrite AUTHENTIK_*
+          # stack secrets. Preserve OIDC client id/secret; only rewrite public URI settings.
+          if [[ -f .env ]]; then
+            grep -Ev '^(AGENTGO_BACKEND_IMAGE_TAG|AGENTGO_UI_BASE_URL|AGENTGO_POSTGRES_PASSWORD|AGENTGO_OIDC_AUTHORIZATION_URI|AGENTGO_OIDC_TOKEN_URI|AGENTGO_OIDC_JWK_SET_URI|AGENTGO_OIDC_USER_INFO_URI|AGENTGO_OIDC_ISSUER_URI|AGENTGO_AUTHENTIK_BROWSER_BASE_URL|AGENTGO_AUTHENTIK_API_BASE_URL|MINIO_ENDPOINT|SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI)=' .env > .env.next || true
+          else
+            : > .env.next
+          fi
+          printf 'AGENTGO_BACKEND_IMAGE_TAG=%s\nAGENTGO_UI_BASE_URL=%s/ui\nAGENTGO_POSTGRES_PASSWORD=%s\n' "$IMAGE_TAG" "$gateway" "$DEPLOY_POSTGRES_PASSWORD" >> .env.next
+          printf 'AGENTGO_OIDC_AUTHORIZATION_URI=%s/application/o/authorize/\n' "$gateway" >> .env.next
+          # Token/JWKS/userinfo must use the same public Authentik host as authorize;
+          # host.docker.internal makes Authentik resolve the wrong tenant/provider.
+          printf 'AGENTGO_OIDC_TOKEN_URI=%s/application/o/token/\n' "$gateway" >> .env.next
+          printf 'AGENTGO_OIDC_JWK_SET_URI=%s/application/o/agentgo/jwks/\n' "$gateway" >> .env.next
+          printf 'AGENTGO_OIDC_USER_INFO_URI=%s/application/o/userinfo/\n' "$gateway" >> .env.next
+          if ! grep -q '^AGENTGO_OIDC_CLIENT_ID=' .env.next; then
+            printf 'AGENTGO_OIDC_CLIENT_ID=agentgo\n' >> .env.next
+          fi
+          if ! grep -q '^AGENTGO_OIDC_CLIENT_SECRET=.\+' .env.next; then
+            echo 'AGENTGO_OIDC_CLIENT_SECRET is missing; sync it from Authentik before login will work' >&2
+          fi
+          printf 'SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_AUTHENTIK_REDIRECT_URI=%s/backend/login/oauth2/code/authentik\n' "$gateway" >> .env.next
+          printf 'AGENTGO_AUTHENTIK_BROWSER_BASE_URL=%s\n' "$gateway" >> .env.next
+          printf 'AGENTGO_AUTHENTIK_API_BASE_URL=http://host.docker.internal:20900\n' >> .env.next
+          printf 'MINIO_ENDPOINT=http://host.docker.internal:20910\n' >> .env.next
+          if ! grep -q '^MINIO_ACCESS_KEY=.\+' .env.next; then
+            echo 'MINIO_ACCESS_KEY is missing; sync it from the host MinIO root user before uploads will work' >&2
+          fi
+          if ! grep -q '^MINIO_SECRET_KEY=.\+' .env.next; then
+            echo 'MINIO_SECRET_KEY is missing; sync it from the host MinIO root password before uploads will work' >&2
+          fi
           mv .env.next .env
           chmod 600 .env
-          [[ "$SERVER_IMAGE_EXISTS" == true ]] || docker compose pull agentgo-app
-          docker compose up -d agentgo-authentik-server agentgo-authentik-worker agentgo-app
+          docker compose config -q
+          # Host already runs Authentik on :20900; only start the backend app stack.
+          docker compose -p agentgo up -d agentgo-app
           REMOTE
 
       - name: Verify TEST deployment
@@ -155,7 +199,23 @@ jobs:
         run: |
           set -euo pipefail
           ssh_options=(-i "$KEY_FILE" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS_FILE")
-          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "docker inspect -f '{{.State.Running}}' agentgo-app | grep -qx true && curl --fail --silent http://127.0.0.1:20082/actuator/health >/dev/null"
+          # Spring Boot may need more than a single probe after first boot / Flyway.
+          ssh "${ssh_options[@]}" "$DEPLOY_USER@$DEPLOY_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          docker inspect -f '{{.State.Running}}' agentgo-app | grep -qx true
+          for i in $(seq 1 36); do
+            if curl --fail --silent --max-time 5 http://127.0.0.1:20082/actuator/health >/dev/null; then
+              curl --fail --silent --max-time 5 http://127.0.0.1:20082/actuator/health
+              echo
+              exit 0
+            fi
+            echo "waiting for actuator health ($i/36)..."
+            sleep 5
+          done
+          echo 'agentgo-app failed health checks; recent logs:' >&2
+          docker logs agentgo-app --tail 120 >&2 || true
+          exit 1
+          REMOTE
 
       - name: Write deployment summary
         if: always()

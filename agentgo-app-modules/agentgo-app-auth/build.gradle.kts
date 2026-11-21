@@ -23,6 +23,7 @@ tasks.named<Jar>("jar") {
 
 dependencies {
     implementation(project(":agentgo-dto"))
+    api(project(":agentgo-app-modules:agentgo-persistence-starter"))
     implementation(project(":agentgo-app-modules:agentgo-app-file"))
     api(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
     api("org.springframework.boot:spring-boot-starter-security")
@@ -30,4 +31,11 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springdoc:springdoc-openapi-starter-common:${rootProject.extra["springdocVersion"]}")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    testImplementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
+    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:${rootProject.extra["mockitoKotlinVersion"]}")
+    testRuntimeOnly("com.h2database:h2")
 }

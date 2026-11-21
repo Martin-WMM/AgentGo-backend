@@ -1,9 +1,13 @@
-description = "AgentGo AI integration Spring Boot starter"
+import org.gradle.jvm.tasks.Jar
+
+description = "AgentGo core workflow Spring Boot starter"
+
+tasks.named<Jar>("jar") {
+    enabled = true
+}
 
 dependencies {
     api(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
-    api(platform("org.springframework.ai:spring-ai-bom:${rootProject.extra["springAiVersion"]}"))
     api(project(":agentgo-springboot-starter"))
     api(project(":agentgo-core"))
-    api("org.springframework.ai:spring-ai-starter-model-openai")
 }
