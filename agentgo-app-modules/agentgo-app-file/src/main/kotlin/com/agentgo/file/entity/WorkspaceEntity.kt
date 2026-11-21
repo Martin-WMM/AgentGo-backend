@@ -11,9 +11,9 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import jakarta.validation.Valid
 import java.time.Instant
-import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedBy
@@ -33,7 +33,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
  *
  * @property id persistent primary key
  * @property ownerUserId authenticated owner identifier
- * @property name display name unique per owner
+ * @property groupName group that scopes [name] for the creator
+ * @property name display name unique with [groupName] and [creator]
  * @property description optional free-form description
  * @property metadata presentation metadata, including the accent color
  * @property creator audit actor that created the row
@@ -42,12 +43,20 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
  * @property updatedBy audit actor that last modified the row
  */
 @Entity
-@Table(name = "tbl_workspace")
+@Table(
+    name = "tbl_workspace",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uq_tbl_workspace_group_name_name_creator",
+            columnNames = ["group_name", "name", "creator"],
+        ),
+    ],
+)
 @EntityListeners(AuditingEntityListener::class)
 class WorkspaceEntity(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
 
     @field:TrimmedNotBlank
     @field:TrimmedSize(min = 1, max = 255)
@@ -56,7 +65,12 @@ class WorkspaceEntity(
 
     @field:TrimmedNotBlank
     @field:TrimmedSize(min = 1, max = 255)
-    @Column(name = "name", nullable = false, length = 255, comment = "Human-readable workspace name unique per owner")
+    @Column(name = "group_name", nullable = false, length = 255, comment = "Group name unique together with name and creator")
+    var groupName: String = "default",
+
+    @field:TrimmedNotBlank
+    @field:TrimmedSize(min = 1, max = 255)
+    @Column(name = "name", nullable = false, length = 255, comment = "Human-readable workspace name unique with group name and creator")
     var name: String = "",
 
     @field:NullOrTrimmedSize(max = 2000)

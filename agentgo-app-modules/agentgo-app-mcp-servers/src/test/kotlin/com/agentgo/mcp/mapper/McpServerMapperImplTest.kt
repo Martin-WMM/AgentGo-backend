@@ -6,7 +6,6 @@ import com.agentgo.dto.mcp.McpServerStatus
 import com.agentgo.dto.mcp.McpTransport
 import com.agentgo.mcp.entity.McpServerEntity
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -16,7 +15,7 @@ class McpServerMapperImplTest {
     @Test
     fun `maps entity to response including tools cache`() {
         val entity = McpServerEntity(
-            id = UUID.randomUUID(),
+            id = 1L,
             ownerUserId = "ada",
             name = "docs",
             transport = McpTransport.STREAMABLE_HTTP,

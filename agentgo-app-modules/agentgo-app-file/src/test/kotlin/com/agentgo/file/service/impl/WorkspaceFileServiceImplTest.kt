@@ -4,6 +4,7 @@ import com.agentgo.dto.file.FileMetadataResponse
 import com.agentgo.file.entity.FileEntity
 import com.agentgo.file.exception.EmptyFileException
 import com.agentgo.file.exception.FileException
+import com.agentgo.file.exception.InvalidWorkspacePathException
 import com.agentgo.file.mapper.FileMapper
 import com.agentgo.file.properties.FileProperties
 import com.agentgo.file.repository.FileRepository
@@ -14,7 +15,6 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Base64
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -58,7 +58,7 @@ class WorkspaceFileServiceImplTest {
         val file = MockMultipartFile("file", "notes.txt", "text/plain", "hello".toByteArray())
         val objectKey = workspaceKey("ada", "docs/notes.txt")
         val entity = FileEntity(
-            id = UUID.randomUUID(),
+            id = 1L,
             bucketName = properties.bucketName,
             objectKey = objectKey,
             contentType = "text/plain",
@@ -125,7 +125,7 @@ class WorkspaceFileServiceImplTest {
         authenticateAs("ada")
         val objectKey = workspaceKey("ada", "docs/notes.txt")
         val entity = FileEntity(
-            id = UUID.randomUUID(),
+            id = 2L,
             bucketName = properties.bucketName,
             objectKey = objectKey,
         )
@@ -150,6 +150,39 @@ class WorkspaceFileServiceImplTest {
         assertEquals("FILE-005", exception.responseType)
         verify(fileRepository, never()).delete(org.mockito.kotlin.any<FileEntity>())
         verify(fileService, never()).deleteObject(org.mockito.kotlin.any<String>())
+    }
+
+    @Test
+    fun `deleteWorkspaces removes every file and deletes objects after commit`() {
+        authenticateAs("ada")
+        val firstKey = workspaceKey("ada", "docs/a.txt")
+        val secondKey = workspaceKey("ada", "docs/b.txt")
+        val first = FileEntity(id = 3L, bucketName = properties.bucketName, objectKey = firstKey)
+        val second = FileEntity(id = 4L, bucketName = properties.bucketName, objectKey = secondKey)
+        whenever(fileRepository.findByBucketNameAndObjectKey(properties.bucketName, firstKey)).thenReturn(first)
+        whenever(fileRepository.findByBucketNameAndObjectKey(properties.bucketName, secondKey)).thenReturn(second)
+
+        service.deleteWorkspaces(listOf("docs/a.txt", "docs/b.txt"))
+
+        verify(fileRepository).delete(first)
+        verify(fileRepository).delete(second)
+        verify(fileService).deleteObject(firstKey)
+        verify(fileService).deleteObject(secondKey)
+    }
+
+    @Test
+    fun `deleteWorkspaces deletes nothing when one path is missing or the list is empty`() {
+        authenticateAs("ada")
+        val firstKey = workspaceKey("ada", "docs/a.txt")
+        whenever(fileRepository.findByBucketNameAndObjectKey(properties.bucketName, firstKey))
+            .thenReturn(FileEntity(id = 3L, bucketName = properties.bucketName, objectKey = firstKey))
+        whenever(fileRepository.findByBucketNameAndObjectKey(properties.bucketName, workspaceKey("ada", "missing.txt")))
+            .thenReturn(null)
+
+        assertFailsWith<FileException> { service.deleteWorkspaces(listOf("docs/a.txt", "missing.txt")) }
+        assertFailsWith<InvalidWorkspacePathException> { service.deleteWorkspaces(emptyList()) }
+        verify(fileRepository, never()).delete(any<FileEntity>())
+        verify(fileService, never()).deleteObject(any<String>())
     }
 
     @Test

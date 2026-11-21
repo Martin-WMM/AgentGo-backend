@@ -15,8 +15,8 @@ class WorkspaceExceptionHandlerTest {
     private val messageSource = StaticMessageSource().apply {
         addMessage("WORKSPACE-001", Locale.ENGLISH, "The requested workspace was not found.")
         addMessage("WORKSPACE-001", Locale.SIMPLIFIED_CHINESE, "未找到请求的工作空间。")
-        addMessage("WORKSPACE-003", Locale.ENGLISH, "A workspace with this name already exists.")
-        addMessage("WORKSPACE-003", Locale.SIMPLIFIED_CHINESE, "已存在同名工作空间。")
+        addMessage("WORKSPACE-003", Locale.ENGLISH, "A workspace with this group and name already exists.")
+        addMessage("WORKSPACE-003", Locale.SIMPLIFIED_CHINESE, "已存在相同分组和名称的工作空间。")
     }
     private val handler = WorkspaceExceptionHandler(AgentGoMessages(messageSource))
 
@@ -47,6 +47,6 @@ class WorkspaceExceptionHandlerTest {
         assertEquals(409, response.statusCode.value())
         assertEquals(2303, response.body?.code)
         assertEquals("WORKSPACE-003", response.body?.responseType)
-        assertEquals("已存在同名工作空间。", response.body?.message)
+        assertEquals("已存在相同分组和名称的工作空间。", response.body?.message)
     }
 }

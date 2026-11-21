@@ -2,7 +2,6 @@ package com.agentgo.dto.workspace
 
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
-import java.util.UUID
 
 /**
  * API representation of a user-owned file workspace.
@@ -21,12 +20,18 @@ import java.util.UUID
 data class WorkspaceResponse(
     @field:Schema(
         description = "Persistent workspace identifier",
-        format = "uuid",
+        format = "int64",
         requiredMode = Schema.RequiredMode.REQUIRED,
     )
-    val id: UUID,
+    val id: Long,
     @field:Schema(
-        description = "Human-readable workspace name unique for the authenticated user",
+        description = "Group name. Unique together with name and the creator.",
+        example = "default",
+        requiredMode = Schema.RequiredMode.REQUIRED,
+    )
+    val groupName: String = "default",
+    @field:Schema(
+        description = "Human-readable workspace name, unique with groupName and the creator",
         example = "Reports",
         requiredMode = Schema.RequiredMode.REQUIRED,
     )

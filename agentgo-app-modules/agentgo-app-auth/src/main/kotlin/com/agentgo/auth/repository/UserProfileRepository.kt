@@ -13,7 +13,7 @@ import org.springframework.data.repository.query.QueryByExampleExecutor
  * user's personal context without accepting an owner id from a client payload.
  */
 interface UserProfileRepository :
-    JpaRepository<UserProfileEntity, UUID>,
+    JpaRepository<UserProfileEntity, Long>,
     JpaSpecificationExecutor<UserProfileEntity>,
     QueryByExampleExecutor<UserProfileEntity> {
     /**

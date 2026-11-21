@@ -14,10 +14,19 @@ import jakarta.validation.Valid
  */
 @Schema(description = "Request body for updating a user-owned file workspace")
 class WorkspaceUpdateRequest {
+    @field:TrimmedSize(max = 255)
+    @field:Schema(
+        description = "Group name. Unique together with name and the creator. Blank becomes default.",
+        example = "default",
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+        maxLength = 255,
+    )
+    var groupName: String = ""
+
     @field:TrimmedNotBlank
     @field:TrimmedSize(min = 1, max = 255)
     @field:Schema(
-        description = "Human-readable workspace name unique for the authenticated user",
+        description = "Human-readable workspace name, unique with groupName and the creator",
         example = "Reports",
         requiredMode = Schema.RequiredMode.REQUIRED,
         maxLength = 255,

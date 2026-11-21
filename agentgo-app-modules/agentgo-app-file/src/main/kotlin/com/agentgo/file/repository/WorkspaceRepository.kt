@@ -1,7 +1,6 @@
 package com.agentgo.file.repository
 
 import com.agentgo.file.entity.WorkspaceEntity
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.repository.query.QueryByExampleExecutor
@@ -13,7 +12,7 @@ import org.springframework.data.repository.query.QueryByExampleExecutor
  * another user's workspaces by id alone.
  */
 interface WorkspaceRepository :
-    JpaRepository<WorkspaceEntity, UUID>,
+    JpaRepository<WorkspaceEntity, Long>,
     JpaSpecificationExecutor<WorkspaceEntity>,
     QueryByExampleExecutor<WorkspaceEntity> {
     /**
@@ -23,7 +22,7 @@ interface WorkspaceRepository :
      * @param ownerUserId authenticated owner
      * @return matching entity, or `null` when absent
      */
-    fun findByIdAndOwnerUserId(id: UUID, ownerUserId: String): WorkspaceEntity?
+    fun findByIdAndOwnerUserId(id: Long, ownerUserId: String): WorkspaceEntity?
 
     /**
      * Lists every workspace owned by [ownerUserId], newest updates first.
@@ -34,21 +33,28 @@ interface WorkspaceRepository :
     fun findByOwnerUserIdOrderByUpdatedAtDesc(ownerUserId: String): List<WorkspaceEntity>
 
     /**
-     * Returns whether the owner already has a workspace with [name].
+     * Returns whether [creator] already has a workspace with [groupName] and [name].
      *
-     * @param ownerUserId authenticated owner
+     * @param groupName resource group
      * @param name candidate workspace name
+     * @param creator audit creator that owns the uniqueness key
      * @return `true` when a conflicting row exists
      */
-    fun existsByOwnerUserIdAndName(ownerUserId: String, name: String): Boolean
+    fun existsByGroupNameAndNameAndCreator(groupName: String, name: String, creator: String): Boolean
 
     /**
-     * Returns whether the owner already has another workspace with [name].
+     * Returns whether [creator] already has another workspace with [groupName] and [name].
      *
-     * @param ownerUserId authenticated owner
+     * @param groupName resource group
      * @param name candidate workspace name
+     * @param creator audit creator that owns the uniqueness key
      * @param id workspace identifier to exclude from the uniqueness check
      * @return `true` when a conflicting row exists
      */
-    fun existsByOwnerUserIdAndNameAndIdNot(ownerUserId: String, name: String, id: UUID): Boolean
+    fun existsByGroupNameAndNameAndCreatorAndIdNot(
+        groupName: String,
+        name: String,
+        creator: String,
+        id: Long,
+    ): Boolean
 }

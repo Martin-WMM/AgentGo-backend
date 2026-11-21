@@ -28,8 +28,22 @@ All notable changes to AgentGo Backend are documented in this file.
   `updatedAt`), and `order` (`ASC` or `DESC`). Omitting `sort` keeps newest `updatedAt`
   first. The envelope `data` field is a `PageResponse`.
 
+### Changed
+
+- Flyway `V16__bigint_ids_and_resource_groups` replaces application UUID primary keys with
+  `BIGINT` identity values. Existing rows receive new sequential ids. Authentik user UUIDs
+  and HTTP correlation ids stay UUID. Models, MCP servers, and workspaces now require
+  uniqueness on `group_name` + `name` + `creator`; omitted group names are stored as `default`.
+
 ### Added
 
+- Added `agentgo-app-a2a` with user-scoped A2A sub-agent management (`/api/v1/a2aAgents`),
+  Flyway `V15__create_a2a_agent` (`tbl_a2a_agent`), and `agentgo-dto-a2a`. Fields are the
+  agent-card URL, group name, name, description, tags, metadata, a 64-dimension description
+  feature-hash vector, enabled, and status (`UNKNOWN` / `AVAILABLE` / `UNAVAILABLE` / `ERROR`).
+  Primary keys are `BIGINT` identity values. Uniqueness is `group_name` + `name` + `creator`.
+  The vector is recomputed from the description on create and update. Success codes
+  `9900`–`9904`; failures `A2A-001`…`A2A-003`.
 - Added `agentgo-app-mcp-servers` with user-scoped MCP Streamable HTTP server management
   (`/api/v1/mcpServers`), Flyway `V12__create_mcp_server` (`tbl_mcp_server`), and
   `agentgo-dto-mcp`. Local/stdio transports are rejected. CRUD plus `POST /{id}/probe`

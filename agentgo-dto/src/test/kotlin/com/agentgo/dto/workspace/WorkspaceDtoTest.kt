@@ -4,7 +4,6 @@ import jakarta.validation.ConstraintValidatorContext
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -47,7 +46,7 @@ class WorkspaceDtoTest {
         }
         val createdAt = Instant.parse("2026-01-01T00:00:00Z")
         val updatedAt = Instant.parse("2026-01-02T00:00:00Z")
-        val id = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6")
+        val id = 1L
         val response = WorkspaceResponse(
             id = id,
             name = "Reports",

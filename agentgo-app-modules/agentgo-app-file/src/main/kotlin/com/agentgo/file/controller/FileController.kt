@@ -2,6 +2,7 @@ package com.agentgo.file.controller
 
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.commons.dto.http.response.status.success.FileResponseCodeRegistry
+import com.agentgo.dto.file.BatchPathsRequest
 import com.agentgo.dto.file.FileMetadataResponse
 import com.agentgo.file.controller.apidoc.FileControllerApiDoc
 import com.agentgo.file.service.WorkspaceFileService
@@ -32,6 +33,11 @@ class FileController(
 
     override fun deleteWorkspace(path: String): ResponseEntity<Void> {
         fileService.deleteWorkspace(path)
+        return ResponseEntity.noContent().build()
+    }
+
+    override fun deleteWorkspaces(request: BatchPathsRequest): ResponseEntity<Void> {
+        fileService.deleteWorkspaces(request.paths.orEmpty())
         return ResponseEntity.noContent().build()
     }
 

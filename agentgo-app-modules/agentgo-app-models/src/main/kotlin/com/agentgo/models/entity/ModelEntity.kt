@@ -10,8 +10,8 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.Instant
-import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedBy
@@ -39,17 +39,28 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
  * @property updatedBy audit actor that last modified the row
  */
 @Entity
-@Table(name = "tbl_model")
+@Table(
+    name = "tbl_model",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uq_tbl_model_group_name_name_creator",
+            columnNames = ["group_name", "name", "creator"],
+        ),
+    ],
+)
 @EntityListeners(AuditingEntityListener::class)
 class ModelEntity(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
 
     @Column(name = "owner_user_id", nullable = false, updatable = false, length = 255, comment = "Authenticated owner resolved from the security context")
     var ownerUserId: String = "",
 
-    @Column(name = "name", nullable = false, length = 255, comment = "Human-readable model name unique per owner")
+    @Column(name = "group_name", nullable = false, length = 255, comment = "Group name unique together with name and creator")
+    var groupName: String = "default",
+
+    @Column(name = "name", nullable = false, length = 255, comment = "Human-readable model name unique with group name and creator")
     var name: String = "",
 
     @Column(name = "provider", nullable = false, length = 255, comment = "Upstream provider identifier")

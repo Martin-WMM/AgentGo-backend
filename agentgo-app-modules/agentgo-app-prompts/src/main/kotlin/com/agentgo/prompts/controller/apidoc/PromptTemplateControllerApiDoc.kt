@@ -1,6 +1,7 @@
 package com.agentgo.prompts.controller.apidoc
 
 import com.agentgo.commons.api.ApiPaths
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.request.PageRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.commons.dto.http.response.PageResponse
@@ -9,6 +10,7 @@ import com.agentgo.dto.prompts.PromptTemplatePreviewRequest
 import com.agentgo.dto.prompts.PromptTemplateRenderRequest
 import com.agentgo.dto.prompts.PromptTemplateRenderResponse
 import com.agentgo.dto.prompts.PromptTemplateResponse
+import com.agentgo.dto.prompts.PromptTemplateRevisionResponse
 import com.agentgo.dto.prompts.PromptTemplateUpdateRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -16,7 +18,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import java.util.UUID
+import jakarta.validation.Valid
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -37,7 +39,9 @@ import org.springframework.web.bind.annotation.RequestMapping
     name = "Prompt templates",
     description = "Versioned user-owned prompt templates at /api/v1/promptTemplates. " +
         "Every template belongs to the authenticated user; operations never cross owners. " +
-        "name is unique per owner (HTTP 409, PROMPT-003). engine is SIMPLE or JINJA2. SIMPLE replaces " +
+        "groupName, name, and creator are unique together (HTTP 409, PROMPT-003). version on the " +
+        "live template is latest. Each save records a revision with a commit message and a unified " +
+        "diff. engine is SIMPLE or JINJA2. SIMPLE replaces " +
         "{{ identifier }} placeholders only: the identifier matches [A-Za-z_][A-Za-z0-9_]*, whitespace " +
         "inside the braces is allowed, and expressions, filters, conditions, and loops are rejected. " +
         "JINJA2 renders a restricted Jinja2 template with conditions and loops; include, import, from, " +
@@ -46,7 +50,7 @@ import org.springframework.web.bind.annotation.RequestMapping
         "POST /preview renders an unsaved body. POST /{id}/render renders a stored template. " +
         "variables is a JSON object of scalars, arrays, and objects. Missing variables and " +
         "render failures return HTTP 400 and PROMPT-004 without an engine stack trace. " +
-        "Delete returns HTTP 204. Success codes are 9200 through 9205. " +
+        "Delete returns HTTP 204. Success codes are 9200 through 9207. " +
         "PROMPT-001 is not found, PROMPT-002 is an invalid request, and PROMPT-005 is forbidden. " +
         "Missing authentication uses AUTH-002.",
 )
@@ -57,18 +61,18 @@ interface PromptTemplateControllerApiDoc {
         description = "Stores a template owned by the caller. The name must be unique for that user. " +
             "SIMPLE and JINJA2 bodies are syntax-checked before they are saved. " +
             "Returns 9201 PROMPT-CREATED. PROMPT-002 rejects a blank name, blank content, an " +
-            "oversized field, or invalid template syntax. PROMPT-003 rejects a duplicate name.",
+            "oversized field, or invalid template syntax. PROMPT-003 rejects a duplicate group, name, and creator.",
     )
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Prompt template created (9201 PROMPT-CREATED)", useReturnTypeSchema = true),
             ApiResponse(responseCode = "400", description = "Invalid prompt template request (PROMPT-002)"),
             ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
-            ApiResponse(responseCode = "409", description = "Duplicate name for this owner (PROMPT-003)"),
+            ApiResponse(responseCode = "409", description = "Duplicate group, name, and creator (PROMPT-003)"),
         ],
     )
     @PostMapping
-    fun create(@RequestBody request: PromptTemplateCreateRequest): CommonHttpResponse<PromptTemplateResponse>
+    fun create(@Valid @RequestBody request: PromptTemplateCreateRequest): CommonHttpResponse<PromptTemplateResponse>
 
     @Operation(
         summary = "Get one prompt template owned by the authenticated user",
@@ -90,13 +94,13 @@ interface PromptTemplateControllerApiDoc {
             required = true,
             example = "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         )
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): CommonHttpResponse<PromptTemplateResponse>
 
     @Operation(
         summary = "List prompt templates owned by the authenticated user",
         description = "Returns one page of the caller's templates. page starts at 1. size defaults to 20 " +
-            "and must be at most 100. sort accepts name, engine, createdAt, and updatedAt. " +
+            "and must be at most 100. sort accepts groupName, name, engine, createdAt, and updatedAt. " +
             "When sort is omitted, templates are ordered by updatedAt descending. " +
             "order is ASC or DESC and applies to every requested sort field. " +
             "Returns 9200 PROMPT-LIST-RETRIEVED. PROMPT-002 rejects an unknown sort field or a size above 100.",
@@ -115,9 +119,10 @@ interface PromptTemplateControllerApiDoc {
 
     @Operation(
         summary = "Replace a prompt template owned by the authenticated user",
-        description = "Replaces name, engine, content, and description. Uniqueness is checked " +
-            "against other templates owned by the same user. The body is syntax-checked again. " +
-            "Returns 9203 PROMPT-UPDATED.",
+        description = "Replaces groupName, name, engine, content, description, tags, and metadata. " +
+            "message is the commit comment and is required when the replacement changes the template. " +
+            "Uniqueness is groupName + name + creator. The body is syntax-checked again. " +
+            "The live version stays latest. Returns 9203 PROMPT-UPDATED.",
     )
     @ApiResponses(
         value = [
@@ -125,7 +130,7 @@ interface PromptTemplateControllerApiDoc {
             ApiResponse(responseCode = "400", description = "Invalid prompt template request (PROMPT-002)"),
             ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
             ApiResponse(responseCode = "404", description = "Prompt template not found (PROMPT-001)"),
-            ApiResponse(responseCode = "409", description = "Duplicate name for this owner (PROMPT-003)"),
+            ApiResponse(responseCode = "409", description = "Duplicate group, name, and creator (PROMPT-003)"),
         ],
     )
     @PutMapping("/{id}")
@@ -135,8 +140,8 @@ interface PromptTemplateControllerApiDoc {
             `in` = ParameterIn.PATH,
             required = true,
         )
-        @PathVariable("id") id: UUID,
-        @RequestBody request: PromptTemplateUpdateRequest,
+        @PathVariable("id") id: Long,
+        @Valid @RequestBody request: PromptTemplateUpdateRequest,
     ): CommonHttpResponse<PromptTemplateResponse>
 
     @Operation(
@@ -158,8 +163,25 @@ interface PromptTemplateControllerApiDoc {
             `in` = ParameterIn.PATH,
             required = true,
         )
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): ResponseEntity<Void>
+
+    @Operation(
+        summary = "Delete prompt templates owned by the authenticated user",
+        description = "Deletes every listed template and its revisions in one transaction and returns HTTP 204. " +
+            "An empty list, more than 100 ids, a non-positive id, or any missing id rejects the " +
+            "request and deletes nothing. Another user's id is not found.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Prompt templates deleted"),
+            ApiResponse(responseCode = "400", description = "Invalid id list (PROMPT-002)"),
+            ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
+            ApiResponse(responseCode = "404", description = "Prompt template not found (PROMPT-001)"),
+        ],
+    )
+    @PostMapping("/batch-delete")
+    fun deleteAll(@RequestBody request: BatchIdsRequest): ResponseEntity<Void>
 
     @Operation(
         summary = "Preview an unsaved prompt template",
@@ -177,7 +199,7 @@ interface PromptTemplateControllerApiDoc {
         ],
     )
     @PostMapping("/preview")
-    fun preview(@RequestBody request: PromptTemplatePreviewRequest): CommonHttpResponse<PromptTemplateRenderResponse>
+    fun preview(@Valid @RequestBody request: PromptTemplatePreviewRequest): CommonHttpResponse<PromptTemplateRenderResponse>
 
     @Operation(
         summary = "Render a stored prompt template owned by the authenticated user",
@@ -200,7 +222,64 @@ interface PromptTemplateControllerApiDoc {
             `in` = ParameterIn.PATH,
             required = true,
         )
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
         @RequestBody request: PromptTemplateRenderRequest,
     ): CommonHttpResponse<PromptTemplateRenderResponse>
+
+    @Operation(
+        summary = "List revisions of a prompt template owned by the authenticated user",
+        description = "Returns one page of commits, newest revision first. page starts at 1. size defaults " +
+            "to 20 and must be at most 100. sort is ignored. version on each row is the concrete " +
+            "decimal label. Returns 9206 PROMPT-REVISIONS-LISTED.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Prompt template revisions listed (9206 PROMPT-REVISIONS-LISTED)", useReturnTypeSchema = true),
+            ApiResponse(responseCode = "400", description = "Invalid page request (PROMPT-002)"),
+            ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
+            ApiResponse(responseCode = "404", description = "Prompt template not found (PROMPT-001)"),
+        ],
+    )
+    @GetMapping("/{id}/revisions")
+    fun listRevisions(
+        @Parameter(
+            description = "Prompt template identifier owned by the authenticated user",
+            `in` = ParameterIn.PATH,
+            required = true,
+        )
+        @PathVariable("id") id: Long,
+        @ParameterObject @ModelAttribute request: PageRequest,
+    ): CommonHttpResponse<PageResponse<PromptTemplateRevisionResponse>>
+
+    @Operation(
+        summary = "Get one revision of a prompt template owned by the authenticated user",
+        description = "version is latest or a concrete decimal label such as 1. latest resolves to the " +
+            "head revision and the response version field is that concrete label. Returns 9207 " +
+            "PROMPT-REVISION-RETRIEVED. An unknown revision returns PROMPT-001. A malformed version " +
+            "returns PROMPT-002.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Prompt template revision retrieved (9207 PROMPT-REVISION-RETRIEVED)", useReturnTypeSchema = true),
+            ApiResponse(responseCode = "400", description = "Invalid version (PROMPT-002)"),
+            ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
+            ApiResponse(responseCode = "404", description = "Prompt template or revision not found (PROMPT-001)"),
+        ],
+    )
+    @GetMapping("/{id}/revisions/{version}")
+    fun getRevision(
+        @Parameter(
+            description = "Prompt template identifier owned by the authenticated user",
+            `in` = ParameterIn.PATH,
+            required = true,
+        )
+        @PathVariable("id") id: Long,
+        @Parameter(
+            description = "latest or a concrete revision label such as 1",
+            `in` = ParameterIn.PATH,
+            required = true,
+            example = "latest",
+        )
+        @PathVariable("version") version: String,
+    ): CommonHttpResponse<PromptTemplateRevisionResponse>
 }

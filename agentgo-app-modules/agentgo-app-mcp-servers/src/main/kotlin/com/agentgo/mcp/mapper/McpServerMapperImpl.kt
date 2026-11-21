@@ -14,6 +14,7 @@ class McpServerMapperImpl : McpServerMapper {
     override fun toResponse(entity: McpServerEntity): McpServerResponse =
         McpServerResponse(
             id = requireNotNull(entity.id) { "Persisted MCP server must have an identifier." },
+            groupName = entity.groupName,
             name = entity.name,
             transport = entity.transport,
             endpointUrl = entity.endpointUrl,
@@ -42,6 +43,7 @@ class McpServerMapperImpl : McpServerMapper {
     override fun toEntity(ownerUserId: String, request: McpServerCreateRequest): McpServerEntity =
         McpServerEntity(
             ownerUserId = ownerUserId,
+            groupName = request.groupName,
             name = request.name,
             transport = request.transport ?: McpTransport.STREAMABLE_HTTP,
             endpointUrl = request.endpointUrl,
@@ -55,6 +57,7 @@ class McpServerMapperImpl : McpServerMapper {
         )
 
     override fun applyUpdate(entity: McpServerEntity, request: McpServerUpdateRequest) {
+        entity.groupName = request.groupName
         entity.name = request.name
         entity.transport = request.transport ?: McpTransport.STREAMABLE_HTTP
         entity.endpointUrl = request.endpointUrl

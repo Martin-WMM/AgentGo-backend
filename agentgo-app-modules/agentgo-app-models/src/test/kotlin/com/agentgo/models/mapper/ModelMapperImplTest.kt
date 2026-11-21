@@ -5,7 +5,6 @@ import com.agentgo.dto.models.ModelType
 import com.agentgo.dto.models.ModelUpdateRequest
 import com.agentgo.models.entity.ModelEntity
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -36,7 +35,7 @@ class ModelMapperImplTest {
 
     @Test
     fun mapsEntityToResponseAndAppliesUpdates() {
-        val id = UUID.randomUUID()
+        val id = 1L
         val createdAt = Instant.parse("2026-01-01T00:00:00Z")
         val updatedAt = Instant.parse("2026-01-02T00:00:00Z")
         val entity = ModelEntity(

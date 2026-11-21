@@ -3,7 +3,6 @@ package com.agentgo.file.service
 import com.agentgo.dto.workspace.WorkspaceCreateRequest
 import com.agentgo.dto.workspace.WorkspaceResponse
 import com.agentgo.dto.workspace.WorkspaceUpdateRequest
-import java.util.UUID
 
 /** Coordinates authenticated file-workspace business operations and persistence. */
 interface WorkspaceService {
@@ -21,7 +20,7 @@ interface WorkspaceService {
      * @param id workspace identifier
      * @return matching workspace
      */
-    fun get(id: UUID): WorkspaceResponse
+    fun get(id: Long): WorkspaceResponse
 
     /**
      * Lists every workspace owned by the authenticated user.
@@ -37,12 +36,22 @@ interface WorkspaceService {
      * @param request update payload
      * @return updated workspace
      */
-    fun update(id: UUID, request: WorkspaceUpdateRequest): WorkspaceResponse
+    fun update(id: Long, request: WorkspaceUpdateRequest): WorkspaceResponse
 
     /**
      * Deletes an empty workspace owned by the authenticated user.
      *
      * @param id workspace identifier
      */
-    fun delete(id: UUID)
+    fun delete(id: Long)
+
+    /**
+     * Deletes every listed empty workspace owned by the authenticated user.
+     *
+     * The operation is all-or-nothing. A missing id or a workspace that still contains
+     * files deletes none of the workspaces.
+     *
+     * @param ids workspace identifiers
+     */
+    fun deleteAll(ids: List<Long>)
 }

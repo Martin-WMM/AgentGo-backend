@@ -4,7 +4,6 @@ import com.agentgo.dto.models.ModelCreateRequest
 import com.agentgo.dto.models.ModelResponse
 import com.agentgo.dto.models.ModelType
 import com.agentgo.dto.models.ModelUpdateRequest
-import java.util.UUID
 
 /**
  * Application service for authenticated, user-scoped model management.
@@ -27,7 +26,7 @@ interface ModelService {
      * @param id model identifier
      * @return model response
      */
-    fun get(id: UUID): ModelResponse
+    fun get(id: Long): ModelResponse
 
     /**
      * Lists models owned by the authenticated user.
@@ -44,12 +43,21 @@ interface ModelService {
      * @param request update payload
      * @return updated model response
      */
-    fun update(id: UUID, request: ModelUpdateRequest): ModelResponse
+    fun update(id: Long, request: ModelUpdateRequest): ModelResponse
 
     /**
      * Deletes a model owned by the authenticated user.
      *
      * @param id model identifier
      */
-    fun delete(id: UUID)
+    fun delete(id: Long)
+
+    /**
+     * Deletes every listed model owned by the authenticated user.
+     *
+     * The operation is all-or-nothing. A missing id deletes none of the models.
+     *
+     * @param ids model identifiers
+     */
+    fun deleteAll(ids: List<Long>)
 }

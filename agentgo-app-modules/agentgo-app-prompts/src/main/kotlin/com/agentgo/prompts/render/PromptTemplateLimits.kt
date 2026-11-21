@@ -7,8 +7,23 @@ object PromptTemplateLimits {
     /** Maximum stored template name length. */
     const val NAME_MAX_LENGTH: Int = 255
 
+    /** Maximum stored group name length. */
+    const val GROUP_NAME_MAX_LENGTH: Int = 255
+
     /** Maximum stored description length. */
     const val DESCRIPTION_MAX_LENGTH: Int = 2000
+
+    /** Maximum stored commit comment length. */
+    const val COMMIT_MESSAGE_MAX_LENGTH: Int = 2000
+
+    /** Commit comment used when create omits one. */
+    const val INITIAL_COMMIT_MESSAGE: String = "Initial commit"
+
+    /** Maximum number of tags stored on one template. */
+    const val TAG_MAX_COUNT: Int = 20
+
+    /** Maximum length of one tag. */
+    const val TAG_MAX_LENGTH: Int = 32
 
     /** Maximum stored template body length. */
     const val CONTENT_MAX_LENGTH: Int = 100_000

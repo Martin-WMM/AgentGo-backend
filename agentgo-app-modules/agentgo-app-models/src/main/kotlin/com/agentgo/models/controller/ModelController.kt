@@ -1,5 +1,6 @@
 package com.agentgo.models.controller
 
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.commons.dto.http.response.status.success.ModelsResponseCodeRegistry
 import com.agentgo.dto.models.ModelCreateRequest
@@ -8,7 +9,6 @@ import com.agentgo.dto.models.ModelType
 import com.agentgo.dto.models.ModelUpdateRequest
 import com.agentgo.models.controller.apidoc.ModelControllerApiDoc
 import com.agentgo.models.service.ModelService
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 
@@ -29,7 +29,7 @@ class ModelController(
             data = modelService.create(request),
         )
 
-    override fun get(id: UUID): CommonHttpResponse<ModelResponse> =
+    override fun get(id: Long): CommonHttpResponse<ModelResponse> =
         CommonHttpResponse(
             code = ModelsResponseCodeRegistry.RETRIEVED,
             responseType = ModelsResponseCodeRegistry.RETRIEVED_TYPE,
@@ -45,7 +45,7 @@ class ModelController(
             data = modelService.list(type),
         )
 
-    override fun update(id: UUID, request: ModelUpdateRequest): CommonHttpResponse<ModelResponse> =
+    override fun update(id: Long, request: ModelUpdateRequest): CommonHttpResponse<ModelResponse> =
         CommonHttpResponse(
             code = ModelsResponseCodeRegistry.UPDATED,
             responseType = ModelsResponseCodeRegistry.UPDATED_TYPE,
@@ -53,8 +53,13 @@ class ModelController(
             data = modelService.update(id, request),
         )
 
-    override fun delete(id: UUID): ResponseEntity<Void> {
+    override fun delete(id: Long): ResponseEntity<Void> {
         modelService.delete(id)
+        return ResponseEntity.noContent().build()
+    }
+
+    override fun deleteAll(request: BatchIdsRequest): ResponseEntity<Void> {
+        modelService.deleteAll(request.ids.orEmpty())
         return ResponseEntity.noContent().build()
     }
 }

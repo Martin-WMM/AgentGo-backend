@@ -1,13 +1,13 @@
 package com.agentgo.models.controller
 
 import com.agentgo.commons.dto.http.response.status.success.ModelsResponseCodeRegistry
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.dto.models.ModelCreateRequest
 import com.agentgo.dto.models.ModelResponse
 import com.agentgo.dto.models.ModelType
 import com.agentgo.dto.models.ModelUpdateRequest
 import com.agentgo.models.service.ModelService
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -22,7 +22,7 @@ class ModelControllerTest {
 
     @Test
     fun delegatesCrudOperationsAndWrapsSuccessCodes() {
-        val id = UUID.randomUUID()
+        val id = 1L
         val createRequest = ModelCreateRequest().apply {
             name = "gpt"
             provider = "openai"
@@ -65,5 +65,16 @@ class ModelControllerTest {
         assertEquals(HttpStatus.NO_CONTENT, deleted.statusCode)
         assertNull(deleted.body)
         verify(modelService).delete(id)
+    }
+
+    @Test
+    fun deleteAllReturnsNoContentAndDelegatesIds() {
+        val request = BatchIdsRequest().apply { ids = listOf(1L, 2L) }
+
+        val deleted = controller.deleteAll(request)
+
+        assertEquals(HttpStatus.NO_CONTENT, deleted.statusCode)
+        assertNull(deleted.body)
+        verify(modelService).deleteAll(listOf(1L, 2L))
     }
 }

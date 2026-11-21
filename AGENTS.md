@@ -24,7 +24,9 @@ module-local version literals when a version is already defined there.
 - `agentgo-app-modules:agentgo-app-file`: Workspace and avatar file metadata with MinIO storage.
 - `agentgo-app-modules:agentgo-app-models`: Authenticated user-owned AI model configuration CRUD.
 - `agentgo-app-modules:agentgo-app-mcp-servers`: Authenticated user-owned MCP Streamable HTTP server CRUD and probe.
+- `agentgo-app-modules:agentgo-app-a2a`: Authenticated user-owned A2A sub-agent CRUD. The description vector is a deterministic feature hash recomputed when the description changes.
 - `agentgo-app-modules:agentgo-app-settings`: Per-user system settings that configure AgentGo clients.
+- `agentgo-app-modules:agentgo-app-events`: Global system event log. Authenticated clients can create, read, update, and delete events. Retention keeps only the newest 1,000 events from the last three months. Business modules record durable mutations with `@RecordSystemEvent` (or `SystemEventRecorder`) using `SystemEventDomains` constants.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
 - `agentgo-commons`: Shared utility types, helpers, and the standardized HTTP, pagination, and SSE response DTOs.
@@ -33,7 +35,9 @@ module-local version literals when a version is already defined there.
   between modules belong here, except for the standardized HTTP, pagination, and SSE response DTOs.
 - `agentgo-dto:agentgo-dto-models`: Request and response DTOs for user-owned model management.
 - `agentgo-dto:agentgo-dto-mcp`: Request and response DTOs for user-owned MCP Streamable HTTP servers.
+- `agentgo-dto:agentgo-dto-a2a`: Request and response DTOs for user-owned A2A sub-agents.
 - `agentgo-dto:agentgo-dto-settings`: Request and response DTOs for per-user system settings.
+- `agentgo-dto:agentgo-dto-events`: Request and response DTOs for the global system event log.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.
 - `db-migration`: Versioned Flyway SQL migrations loaded by `agentgo-app` at startup.
@@ -138,6 +142,21 @@ data is intentional.
 
 - Use Kotlin for new application and library code.
 - Use constructor injection for Spring dependencies.
+- Record durable business mutations in the global system-event log from the **backend
+  service layer**, never from the UI:
+  - Prefer `@RecordSystemEvent` on mutating application-service methods
+    (`create` / `update` / `delete` and equivalent writes). Do not annotate pure reads,
+    probes, renders, or `SystemEventService` itself.
+  - Set `domain` to a `SystemEventDomains` constant. Add a new constant when a capability
+    starts recording; do not invent ad-hoc domain strings in call sites.
+  - Use a short past-tense `name` (for example `Model created`). Put durable identifiers
+    in `comment` with `#{…}` SpEL templates (`#result`, named parameters, `#error` when
+    `recordOnFailure = true`).
+  - Leave `operator` blank so the authenticated principal is stored, unless the business
+    actor differs from the caller.
+  - Recording is fail-open: a monitoring write must not change the business outcome. When
+    an annotation cannot express the control flow, inject `SystemEventRecorder` and call
+    `record(...)` explicitly after the successful unit of work.
 - Use programmatic transactions. Service implementations must open each transaction with
   `TransactionTemplate` or `PlatformTransactionManager` at the call site that owns the unit
   of work. Do not use declarative transactions: no `@Transactional` on classes or methods,

@@ -2,7 +2,6 @@ package com.agentgo.file.service
 
 import com.agentgo.dto.file.FileMetadataResponse
 import com.agentgo.file.storage.StoredFile
-import java.util.UUID
 import org.springframework.web.multipart.MultipartFile
 
 /**
@@ -36,10 +35,20 @@ interface WorkspaceFileService {
     fun deleteWorkspace(path: String)
 
     /**
+     * Deletes every listed workspace file for the current user.
+     *
+     * Metadata is removed in one database transaction. MinIO objects are deleted after commit.
+     * A missing or invalid path deletes none of the files.
+     *
+     * @param paths relative workspace paths
+     */
+    fun deleteWorkspaces(paths: List<String>)
+
+    /**
      * Returns whether the authenticated user still has objects under [workspaceId].
      *
      * @param workspaceId persistent workspace identifier used as the path prefix segment
      * @return `true` when at least one file metadata row exists under that prefix
      */
-    fun hasFilesInWorkspace(workspaceId: UUID): Boolean
+    fun hasFilesInWorkspace(workspaceId: Long): Boolean
 }

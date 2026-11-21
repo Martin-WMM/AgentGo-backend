@@ -6,7 +6,6 @@ import com.agentgo.dto.workspace.WorkspaceMetadata
 import com.agentgo.dto.workspace.WorkspaceUpdateRequest
 import com.agentgo.file.entity.WorkspaceEntity
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -72,7 +71,7 @@ class WorkspaceMapperImplTest {
     fun `response fills the default accent when the stored color is missing`() {
         val response = mapper.toResponse(
             WorkspaceEntity(
-                id = UUID.randomUUID(),
+                id = 1L,
                 ownerUserId = "ada",
                 name = "Reports",
                 metadata = WorkspaceMetadata(),

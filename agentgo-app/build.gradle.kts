@@ -20,8 +20,10 @@ dependencies {
     implementation(project(":agentgo-app-modules:agentgo-app-file"))
     implementation(project(":agentgo-app-modules:agentgo-app-models"))
     implementation(project(":agentgo-app-modules:agentgo-app-mcp-servers"))
+    implementation(project(":agentgo-app-modules:agentgo-app-a2a"))
     implementation(project(":agentgo-app-modules:agentgo-app-prompts"))
     implementation(project(":agentgo-app-modules:agentgo-app-settings"))
+    implementation(project(":agentgo-app-modules:agentgo-app-events"))
 
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

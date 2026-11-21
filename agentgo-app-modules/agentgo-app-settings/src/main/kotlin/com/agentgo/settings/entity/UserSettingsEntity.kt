@@ -14,7 +14,6 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import java.time.Instant
-import java.util.UUID
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedBy
@@ -49,8 +48,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 @EntityListeners(AuditingEntityListener::class)
 class UserSettingsEntity(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
 
     @Column(name = "owner_user_id", nullable = false, updatable = false, length = 255, comment = "OIDC subject of the authenticated user")
     var ownerUserId: String = "",

@@ -5,7 +5,6 @@ import com.agentgo.dto.auth.ProfileUpdateRequest
 import com.agentgo.dto.auth.SessionResponse
 import com.agentgo.dto.file.FileMetadataResponse
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -89,7 +88,7 @@ class DtoModelsTest {
     fun storesFileMetadataAndDefaults() {
         val createdAt = Instant.parse("2026-01-01T00:00:00Z")
         val updatedAt = Instant.parse("2026-01-02T00:00:00Z")
-        val id = UUID.randomUUID()
+        val id = 1L
         val response = FileMetadataResponse(
             id = id,
             bucketName = "agentgo-bucket",

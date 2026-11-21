@@ -1,11 +1,14 @@
 package com.agentgo.prompts.repository
 
+import com.agentgo.dto.presentation.IconSource
+import com.agentgo.dto.presentation.ResourceIcon
 import com.agentgo.dto.prompts.PromptEngine
+import com.agentgo.dto.prompts.PromptTemplateMetadata
 import com.agentgo.prompts.config.PromptTemplateJpaAuditingConfiguration
 import com.agentgo.prompts.entity.PromptTemplateEntity
+import com.agentgo.prompts.entity.PromptTemplateRevisionEntity
 import jakarta.persistence.EntityManager
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,6 +34,7 @@ import org.springframework.test.context.ActiveProfiles
 @EnableJpaRepositories(basePackageClasses = [PromptTemplateRepository::class])
 class PromptTemplateRepositoryTest @Autowired constructor(
     private val promptTemplateRepository: PromptTemplateRepository,
+    private val promptTemplateRevisionRepository: PromptTemplateRevisionRepository,
     private val entityManager: EntityManager,
 ) {
     @AfterTest
@@ -50,6 +54,12 @@ class PromptTemplateRepositoryTest @Autowired constructor(
         assertNotNull(saved.createdAt)
         assertNotNull(saved.updatedAt)
         assertEquals("Greeting", promptTemplateRepository.findById(saved.id!!).orElseThrow().name)
+        entityManager.clear()
+        val reloaded = promptTemplateRepository.findById(saved.id!!).orElseThrow()
+        assertEquals(listOf("draft"), reloaded.tags)
+        assertEquals("#1D4ED8", reloaded.metadata.color)
+        assertEquals(IconSource.ICONIFY, reloaded.metadata.icon?.source)
+        assertEquals("lucide:bot", reloaded.metadata.icon?.value)
     }
 
     @Test
@@ -85,42 +95,80 @@ class PromptTemplateRepositoryTest @Autowired constructor(
     }
 
     @Test
-    fun `existsByOwnerUserIdAndName detects duplicates for one owner`() {
+    fun `existsByGroupNameAndNameAndCreator allows the same name in another group or for another creator`() {
         authenticateAs("ada")
         promptTemplateRepository.saveAndFlush(template("ada", "Greeting"))
+        promptTemplateRepository.saveAndFlush(template("ada", "Greeting", groupName = "tools"))
+        authenticateAs("grace")
         promptTemplateRepository.saveAndFlush(template("grace", "Greeting"))
 
-        assertTrue(promptTemplateRepository.existsByOwnerUserIdAndName("ada", "Greeting"))
-        assertFalse(promptTemplateRepository.existsByOwnerUserIdAndName("ada", "Missing"))
-        assertTrue(promptTemplateRepository.existsByOwnerUserIdAndName("grace", "Greeting"))
+        assertTrue(promptTemplateRepository.existsByGroupNameAndNameAndCreator("chat", "Greeting", "ada"))
+        assertTrue(promptTemplateRepository.existsByGroupNameAndNameAndCreator("tools", "Greeting", "ada"))
+        assertFalse(promptTemplateRepository.existsByGroupNameAndNameAndCreator("chat", "Missing", "ada"))
+        assertTrue(promptTemplateRepository.existsByGroupNameAndNameAndCreator("chat", "Greeting", "grace"))
     }
 
     @Test
-    fun `existsByOwnerUserIdAndNameAndIdNot ignores the current template id`() {
+    fun `existsByGroupNameAndNameAndCreatorAndIdNot ignores the current template id`() {
         authenticateAs("ada")
         val current = promptTemplateRepository.saveAndFlush(template("ada", "Greeting"))
         val other = promptTemplateRepository.saveAndFlush(template("ada", "Archive"))
 
         assertFalse(
-            promptTemplateRepository.existsByOwnerUserIdAndNameAndIdNot(
-                "ada",
+            promptTemplateRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                "chat",
                 "Greeting",
+                "ada",
                 current.id!!,
             ),
         )
         assertTrue(
-            promptTemplateRepository.existsByOwnerUserIdAndNameAndIdNot(
-                "ada",
+            promptTemplateRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                "chat",
                 "Archive",
+                "ada",
                 current.id!!,
             ),
         )
         assertTrue(
-            promptTemplateRepository.existsByOwnerUserIdAndNameAndIdNot(
-                "ada",
+            promptTemplateRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                "chat",
                 "Greeting",
+                "ada",
                 other.id!!,
             ),
+        )
+    }
+
+    @Test
+    fun `revisions round trip and deleteByTemplateId removes them`() {
+        authenticateAs("ada")
+        val saved = promptTemplateRepository.saveAndFlush(template("ada", "Revisioned"))
+        promptTemplateRevisionRepository.saveAndFlush(
+            PromptTemplateRevisionEntity(
+                templateId = saved.id,
+                revisionNumber = 1,
+                message = "Initial commit",
+                author = "ada",
+                diff = "+Hello",
+                groupName = "chat",
+                name = "Revisioned",
+                content = "Hello {{ name }}",
+                metadata = saved.metadata.duplicate(),
+                tags = mutableListOf("draft"),
+            ),
+        )
+        entityManager.clear()
+
+        val loaded = promptTemplateRevisionRepository.findByTemplateIdAndRevisionNumber(saved.id!!, 1)
+        assertEquals("Initial commit", loaded?.message)
+        assertEquals("ada", loaded?.author)
+
+        promptTemplateRevisionRepository.deleteByTemplateId(saved.id!!)
+        promptTemplateRevisionRepository.flush()
+        entityManager.clear()
+        assertTrue(
+            promptTemplateRevisionRepository.findByTemplateId(saved.id!!, PageRequest.of(0, 10)).isEmpty,
         )
     }
 
@@ -136,7 +184,7 @@ class PromptTemplateRepositoryTest @Autowired constructor(
         assertFalse(promptTemplateRepository.findById(id).isPresent)
     }
 
-    private fun setUpdatedAt(id: UUID, updatedAt: Instant) {
+    private fun setUpdatedAt(id: Long, updatedAt: Instant) {
         entityManager.createQuery(
             "update PromptTemplateEntity template set template.updatedAt = :updatedAt where template.id = :id",
         )
@@ -146,12 +194,21 @@ class PromptTemplateRepositoryTest @Autowired constructor(
         entityManager.flush()
     }
 
-    private fun template(ownerUserId: String, name: String) = PromptTemplateEntity(
+    private fun template(ownerUserId: String, name: String, groupName: String = "chat") = PromptTemplateEntity(
         ownerUserId = ownerUserId,
+        groupName = groupName,
         name = name,
         engine = PromptEngine.SIMPLE,
         content = "Hello {{ name }}",
         description = "sample",
+        tags = mutableListOf("draft"),
+        metadata = PromptTemplateMetadata().apply {
+            color = "#1D4ED8"
+            icon = ResourceIcon().apply {
+                source = IconSource.ICONIFY
+                value = "lucide:bot"
+            }
+        },
     )
 
     private fun authenticateAs(userId: String) {

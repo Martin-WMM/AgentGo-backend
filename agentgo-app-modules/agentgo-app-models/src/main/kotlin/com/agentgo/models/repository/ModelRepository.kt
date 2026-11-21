@@ -2,7 +2,6 @@ package com.agentgo.models.repository
 
 import com.agentgo.dto.models.ModelType
 import com.agentgo.models.entity.ModelEntity
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.repository.query.QueryByExampleExecutor
@@ -14,7 +13,7 @@ import org.springframework.data.repository.query.QueryByExampleExecutor
  * another user's models by id alone.
  */
 interface ModelRepository :
-    JpaRepository<ModelEntity, UUID>,
+    JpaRepository<ModelEntity, Long>,
     JpaSpecificationExecutor<ModelEntity>,
     QueryByExampleExecutor<ModelEntity> {
     /**
@@ -24,7 +23,7 @@ interface ModelRepository :
      * @param ownerUserId authenticated owner
      * @return matching entity, or `null` when absent
      */
-    fun findByIdAndOwnerUserId(id: UUID, ownerUserId: String): ModelEntity?
+    fun findByIdAndOwnerUserId(id: Long, ownerUserId: String): ModelEntity?
 
     /**
      * Lists every model owned by [ownerUserId], newest updates first.
@@ -50,7 +49,7 @@ interface ModelRepository :
      * @param name candidate model name
      * @return `true` when a conflicting row exists
      */
-    fun existsByOwnerUserIdAndName(ownerUserId: String, name: String): Boolean
+    fun existsByGroupNameAndNameAndCreator(groupName: String, name: String, creator: String): Boolean
 
     /**
      * Returns whether the owner already has another model with [name].
@@ -60,5 +59,10 @@ interface ModelRepository :
      * @param id model identifier to exclude from the uniqueness check
      * @return `true` when a conflicting row exists
      */
-    fun existsByOwnerUserIdAndNameAndIdNot(ownerUserId: String, name: String, id: UUID): Boolean
+    fun existsByGroupNameAndNameAndCreatorAndIdNot(
+        groupName: String,
+        name: String,
+        creator: String,
+        id: Long,
+    ): Boolean
 }

@@ -2,7 +2,6 @@ package com.agentgo.dto.models
 
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
-import java.util.UUID
 
 /**
  * API representation of a user-owned model configuration.
@@ -20,12 +19,18 @@ import java.util.UUID
 data class ModelResponse(
     @field:Schema(
         description = "Persistent model identifier",
-        format = "uuid",
+        format = "int64",
         requiredMode = Schema.RequiredMode.REQUIRED,
     )
-    val id: UUID,
+    val id: Long,
     @field:Schema(
-        description = "Human-readable model name unique for the authenticated user",
+        description = "Group name. Unique together with name and the creator.",
+        example = "default",
+        requiredMode = Schema.RequiredMode.REQUIRED,
+    )
+    val groupName: String = "default",
+    @field:Schema(
+        description = "Human-readable model name, unique with groupName and the creator",
         example = "gpt-4o-mini",
         requiredMode = Schema.RequiredMode.REQUIRED,
     )

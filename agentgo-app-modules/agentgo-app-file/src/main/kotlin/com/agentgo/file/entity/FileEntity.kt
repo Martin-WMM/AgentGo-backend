@@ -8,7 +8,6 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
-import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedDate
@@ -22,8 +21,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 @EntityListeners(AuditingEntityListener::class)
 class FileEntity(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
 
     @Column(name = "bucket_name", nullable = false, length = 255, comment = "MinIO bucket name")
     var bucketName: String = "",

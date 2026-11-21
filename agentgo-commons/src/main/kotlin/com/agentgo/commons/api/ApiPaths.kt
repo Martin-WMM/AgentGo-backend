@@ -21,8 +21,14 @@ object ApiPaths {
     /** MCP server management endpoints under v1 (Streamable HTTP only). */
     const val V1_MCP_SERVERS: String = "/api/v1/mcpServers"
 
+    /** A2A sub-agent management endpoints under v1. */
+    const val V1_A2A_AGENTS: String = "/api/v1/a2aAgents"
+
     /** Authenticated user system-settings singleton under v1. */
     const val V1_SETTINGS: String = "/api/v1/settings"
+
+    /** Global system-event log under v1. */
+    const val V1_SYSTEM_EVENTS: String = "/api/v1/systemEvents"
 
     /** File-workspace metadata endpoints under v1. */
     const val V1_WORKSPACES: String = "/api/v1/workspaces"
@@ -42,8 +48,14 @@ object ApiPaths {
     /** Ant-style matcher for all v1 MCP server routes (security). */
     const val V1_MCP_SERVERS_ANT: String = "/api/v1/mcpServers/**"
 
+    /** Ant-style matcher for all v1 A2A agent routes (security). */
+    const val V1_A2A_AGENTS_ANT: String = "/api/v1/a2aAgents/**"
+
     /** Ant-style matcher for all v1 workspace routes (security). */
     const val V1_WORKSPACES_ANT: String = "/api/v1/workspaces/**"
+
+    /** Ant-style matcher for all v1 system-event routes (security). */
+    const val V1_SYSTEM_EVENTS_ANT: String = "/api/v1/systemEvents/**"
 
     /** Servlet URL pattern for the upload-size filter. */
     const val V1_FILES_URL_PATTERN: String = "/api/v1/files/*"

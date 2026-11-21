@@ -4,7 +4,6 @@ import com.agentgo.dto.workspace.WorkspaceMetadata
 import com.agentgo.file.config.JpaAuditingConfiguration
 import com.agentgo.file.entity.WorkspaceEntity
 import jakarta.persistence.EntityManager
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -89,22 +88,23 @@ class WorkspaceRepositoryTest @Autowired constructor(
     }
 
     @Test
-    fun `existsByOwnerUserIdAndName detects duplicate names per owner`() {
+    fun `existsByGroupNameAndNameAndCreator detects duplicate names per creator`() {
         authenticateAs("ada")
         workspaceRepository.saveAndFlush(
             WorkspaceEntity(ownerUserId = "ada", name = "Reports"),
         )
+        authenticateAs("grace")
         workspaceRepository.saveAndFlush(
             WorkspaceEntity(ownerUserId = "grace", name = "Reports"),
         )
 
-        assertTrue(workspaceRepository.existsByOwnerUserIdAndName("ada", "Reports"))
-        assertFalse(workspaceRepository.existsByOwnerUserIdAndName("ada", "Missing"))
-        assertTrue(workspaceRepository.existsByOwnerUserIdAndName("grace", "Reports"))
+        assertTrue(workspaceRepository.existsByGroupNameAndNameAndCreator("default", "Reports", "ada"))
+        assertFalse(workspaceRepository.existsByGroupNameAndNameAndCreator("default", "Missing", "ada"))
+        assertTrue(workspaceRepository.existsByGroupNameAndNameAndCreator("default", "Reports", "grace"))
     }
 
     @Test
-    fun `existsByOwnerUserIdAndNameAndIdNot ignores current workspace id`() {
+    fun `existsByGroupNameAndNameAndCreatorAndIdNot ignores current workspace id`() {
         authenticateAs("ada")
         val current = workspaceRepository.saveAndFlush(
             WorkspaceEntity(ownerUserId = "ada", name = "Reports"),
@@ -114,13 +114,28 @@ class WorkspaceRepositoryTest @Autowired constructor(
         )
 
         assertFalse(
-            workspaceRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "Reports", current.id!!),
+            workspaceRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                "default",
+                "Reports",
+                "ada",
+                current.id!!,
+            ),
         )
         assertTrue(
-            workspaceRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "Archive", current.id!!),
+            workspaceRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                "default",
+                "Archive",
+                "ada",
+                current.id!!,
+            ),
         )
         assertTrue(
-            workspaceRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "Reports", other.id!!),
+            workspaceRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                "default",
+                "Reports",
+                "ada",
+                other.id!!,
+            ),
         )
     }
 

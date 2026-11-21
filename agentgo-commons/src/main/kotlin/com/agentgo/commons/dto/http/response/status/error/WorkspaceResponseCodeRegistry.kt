@@ -9,8 +9,8 @@ object WorkspaceResponseCodeRegistry {
             "The requested workspace was not found.",
         "WORKSPACE-002" to "Workspace request parameters are invalid." to
             "The workspace request is invalid.",
-        "WORKSPACE-003" to "A workspace with the same name already exists for the authenticated user." to
-            "A workspace with this name already exists.",
+        "WORKSPACE-003" to "A workspace with the same group, name, and creator already exists." to
+            "A workspace with this group and name already exists.",
         "WORKSPACE-004" to "Workspace still contains files and cannot be deleted." to
             "Delete all files in the workspace before removing it.",
     ).associate { (pair, message) ->

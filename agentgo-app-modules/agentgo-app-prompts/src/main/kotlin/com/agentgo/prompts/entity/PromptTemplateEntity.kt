@@ -1,6 +1,8 @@
 package com.agentgo.prompts.entity
 
 import com.agentgo.dto.prompts.PromptEngine
+import com.agentgo.dto.prompts.PromptTemplateMetadata
+import com.agentgo.dto.prompts.PromptTemplateVersions
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EntityListeners
@@ -10,8 +12,10 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.Instant
-import java.util.UUID
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedBy
@@ -26,28 +30,50 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
  *
  * @property id persistent primary key
  * @property ownerUserId authenticated owner identifier
- * @property name display name unique per owner
+ * @property groupName group that scopes [name] for the creator
+ * @property name display name unique with [groupName] and [creator]
+ * @property version live version label, always `latest`
+ * @property headRevision revision number that `latest` points at
  * @property engine rendering engine
  * @property content template body
  * @property description optional free-form description
+ * @property tags display tags
+ * @property metadata presentation color and icon
  * @property creator audit actor that created the row
  * @property createdAt creation timestamp
  * @property updatedAt last modification timestamp
  * @property updatedBy audit actor that last modified the row
  */
 @Entity
-@Table(name = "tbl_prompt_template")
+@Table(
+    name = "tbl_prompt_template",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uq_tbl_prompt_template_group_name_name_creator",
+            columnNames = ["group_name", "name", "creator"],
+        ),
+    ],
+)
 @EntityListeners(AuditingEntityListener::class)
 class PromptTemplateEntity(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
 
     @Column(name = "owner_user_id", nullable = false, updatable = false, length = 255, comment = "Authenticated owner resolved from the security context")
     var ownerUserId: String = "",
 
-    @Column(name = "name", nullable = false, length = 255, comment = "Human-readable template name unique per owner")
+    @Column(name = "group_name", nullable = false, length = 255, comment = "Group name unique together with name and creator")
+    var groupName: String = "",
+
+    @Column(name = "name", nullable = false, length = 255, comment = "Human-readable template name unique with group name and creator")
     var name: String = "",
+
+    @Column(name = "version", nullable = false, length = 32, comment = "Live version label. Always latest")
+    var version: String = PromptTemplateVersions.LATEST,
+
+    @Column(name = "head_revision", nullable = false, comment = "Revision number that the latest version points at")
+    var headRevision: Int = 1,
 
     @Enumerated(EnumType.STRING)
     @Column(name = "engine", nullable = false, length = 32, comment = "Template engine used to render the content")
@@ -58,6 +84,14 @@ class PromptTemplateEntity(
 
     @Column(name = "description", length = 2000, comment = "Optional free-form description")
     var description: String? = null,
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "tags", nullable = false, comment = "Display tags stored as a JSON array")
+    var tags: MutableList<String> = mutableListOf(),
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata", nullable = false, comment = "Presentation metadata such as the accent color and icon")
+    var metadata: PromptTemplateMetadata = PromptTemplateMetadata(),
 
     @CreatedBy
     @Column(name = "creator", nullable = false, updatable = false, length = 255, comment = "Identifier of the actor that created the prompt template")

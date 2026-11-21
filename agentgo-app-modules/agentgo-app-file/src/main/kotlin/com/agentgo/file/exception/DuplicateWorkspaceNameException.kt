@@ -7,5 +7,5 @@ class DuplicateWorkspaceNameException : WorkspaceException(
     code = 2303,
     responseType = "WORKSPACE-003",
     status = HttpStatus.CONFLICT,
-    message = "A workspace with this name already exists.",
+    message = "A workspace with this group and name already exists.",
 )

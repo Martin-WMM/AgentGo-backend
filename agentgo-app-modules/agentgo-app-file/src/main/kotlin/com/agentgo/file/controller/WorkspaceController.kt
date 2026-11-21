@@ -1,6 +1,7 @@
 package com.agentgo.file.controller
 
 import com.agentgo.commons.annotation.AgentGoLogApi
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.commons.dto.http.response.status.success.WorkspaceResponseCodeRegistry
 import com.agentgo.dto.workspace.WorkspaceCreateRequest
@@ -10,7 +11,6 @@ import com.agentgo.file.controller.apidoc.WorkspaceControllerApiDoc
 import com.agentgo.file.service.WorkspaceService
 import com.agentgo.starter.i18n.AgentGoMessages
 import jakarta.validation.Valid
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 
@@ -35,7 +35,7 @@ class WorkspaceController(
         )
 
     @AgentGoLogApi(name = "workspace.get")
-    override fun get(id: UUID): CommonHttpResponse<WorkspaceResponse> =
+    override fun get(id: Long): CommonHttpResponse<WorkspaceResponse> =
         CommonHttpResponse(
             code = WorkspaceResponseCodeRegistry.RETRIEVED,
             responseType = WorkspaceResponseCodeRegistry.RETRIEVED_TYPE,
@@ -53,7 +53,7 @@ class WorkspaceController(
         )
 
     @AgentGoLogApi(name = "workspace.update")
-    override fun update(id: UUID, @Valid request: WorkspaceUpdateRequest): CommonHttpResponse<WorkspaceResponse> =
+    override fun update(id: Long, @Valid request: WorkspaceUpdateRequest): CommonHttpResponse<WorkspaceResponse> =
         CommonHttpResponse(
             code = WorkspaceResponseCodeRegistry.UPDATED,
             responseType = WorkspaceResponseCodeRegistry.UPDATED_TYPE,
@@ -62,8 +62,14 @@ class WorkspaceController(
         )
 
     @AgentGoLogApi(name = "workspace.delete")
-    override fun delete(id: UUID): ResponseEntity<Void> {
+    override fun delete(id: Long): ResponseEntity<Void> {
         workspaceService.delete(id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @AgentGoLogApi(name = "workspace.delete-batch")
+    override fun deleteAll(request: BatchIdsRequest): ResponseEntity<Void> {
+        workspaceService.deleteAll(request.ids.orEmpty())
         return ResponseEntity.noContent().build()
     }
 }

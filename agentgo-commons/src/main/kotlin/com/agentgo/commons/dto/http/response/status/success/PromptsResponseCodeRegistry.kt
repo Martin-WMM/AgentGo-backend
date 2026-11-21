@@ -16,6 +16,10 @@ object PromptsResponseCodeRegistry {
     const val DELETED_TYPE = "PROMPT-DELETED"
     const val RENDERED = 9205
     const val RENDERED_TYPE = "PROMPT-RENDERED"
+    const val REVISIONS_LISTED = 9206
+    const val REVISIONS_LISTED_TYPE = "PROMPT-REVISIONS-LISTED"
+    const val REVISION_RETRIEVED = 9207
+    const val REVISION_RETRIEVED_TYPE = "PROMPT-REVISION-RETRIEVED"
 
     val codeDescriptions = mapOf(
         LIST_RETRIEVED_TYPE to ResponseCodeDescription(
@@ -48,6 +52,16 @@ object PromptsResponseCodeRegistry {
             "PROMPT",
             "Prompt template rendered.",
         ),
+        REVISIONS_LISTED_TYPE to ResponseCodeDescription(
+            "Prompt template revisions were listed successfully.",
+            "PROMPT",
+            "Prompt template revisions listed.",
+        ),
+        REVISION_RETRIEVED_TYPE to ResponseCodeDescription(
+            "A prompt template revision was retrieved successfully.",
+            "PROMPT",
+            "Prompt template revision retrieved.",
+        ),
     )
 
     val responseTypesByCode = mapOf(
@@ -57,5 +71,7 @@ object PromptsResponseCodeRegistry {
         UPDATED to UPDATED_TYPE,
         DELETED to DELETED_TYPE,
         RENDERED to RENDERED_TYPE,
+        REVISIONS_LISTED to REVISIONS_LISTED_TYPE,
+        REVISION_RETRIEVED to REVISION_RETRIEVED_TYPE,
     )
 }

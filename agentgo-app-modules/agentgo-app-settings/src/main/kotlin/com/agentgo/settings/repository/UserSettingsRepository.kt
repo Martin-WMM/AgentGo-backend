@@ -1,7 +1,6 @@
 package com.agentgo.settings.repository
 
 import com.agentgo.settings.entity.UserSettingsEntity
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.repository.query.QueryByExampleExecutor
@@ -12,7 +11,7 @@ import org.springframework.data.repository.query.QueryByExampleExecutor
  * Each authenticated user owns at most one settings row.
  */
 interface UserSettingsRepository :
-    JpaRepository<UserSettingsEntity, UUID>,
+    JpaRepository<UserSettingsEntity, Long>,
     JpaSpecificationExecutor<UserSettingsEntity>,
     QueryByExampleExecutor<UserSettingsEntity> {
     /**

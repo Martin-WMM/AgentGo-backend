@@ -2,6 +2,8 @@ package com.agentgo.settings.service.impl
 
 import com.agentgo.dto.settings.UserSettingsResponse
 import com.agentgo.dto.settings.UserSettingsUpdateRequest
+import com.agentgo.events.annotation.RecordSystemEvent
+import com.agentgo.events.domain.SystemEventDomains
 import com.agentgo.settings.mapper.UserSettingsMapper
 import com.agentgo.settings.repository.UserSettingsRepository
 import com.agentgo.settings.security.SettingsUserIdResolver
@@ -42,6 +44,11 @@ class UserSettingsServiceImpl(
         }
     }
 
+    @RecordSystemEvent(
+        domain = SystemEventDomains.SETTINGS,
+        name = "User settings updated",
+        comment = "Updated system settings for the authenticated user",
+    )
     override fun update(request: UserSettingsUpdateRequest): UserSettingsResponse {
         val ownerUserId = settingsUserIdResolver.requireUserId()
         return try {

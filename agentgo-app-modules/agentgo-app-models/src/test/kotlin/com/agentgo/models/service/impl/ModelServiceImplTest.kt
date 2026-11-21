@@ -12,7 +12,6 @@ import com.agentgo.models.mapper.ModelMapper
 import com.agentgo.models.repository.ModelRepository
 import com.agentgo.models.security.AuthenticatedUserIdResolver
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -47,10 +46,10 @@ class ModelServiceImplTest {
             provider = request.provider,
             type = checkNotNull(request.type),
         )
-        val saved = entity.copyWithId(UUID.randomUUID())
+        val saved = entity.copyWithId(1L)
         val response = sampleResponse(saved.id!!, request.name, checkNotNull(request.type))
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
-        whenever(modelRepository.existsByOwnerUserIdAndName("ada", "gpt-4o-mini")).thenReturn(false)
+        whenever(modelRepository.existsByGroupNameAndNameAndCreator("default", "gpt-4o-mini", "ada")).thenReturn(false)
         whenever(modelMapper.toEntity("ada", request)).thenReturn(entity)
         whenever(modelRepository.save(entity)).thenReturn(saved)
         whenever(modelMapper.toResponse(saved)).thenReturn(response)
@@ -72,7 +71,7 @@ class ModelServiceImplTest {
     @Test
     fun rejectsDuplicateNameOnCreate() {
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
-        whenever(modelRepository.existsByOwnerUserIdAndName("ada", "gpt-4o-mini")).thenReturn(true)
+        whenever(modelRepository.existsByGroupNameAndNameAndCreator("default", "gpt-4o-mini", "ada")).thenReturn(true)
 
         assertFailsWith<DuplicateModelNameException> {
             service.create(modelCreateRequest("gpt-4o-mini", "openai", ModelType.LLM))
@@ -81,7 +80,7 @@ class ModelServiceImplTest {
 
     @Test
     fun getsAndListsOnlyOwnerScopedModels() {
-        val id = UUID.randomUUID()
+        val id = 2L
         val entity = ModelEntity(id = id, ownerUserId = "ada", name = "gpt", type = ModelType.LLM, createdAt = Instant.now(), updatedAt = Instant.now())
         val response = sampleResponse(id, "gpt", ModelType.LLM)
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
@@ -96,13 +95,13 @@ class ModelServiceImplTest {
 
     @Test
     fun updatesAndDeletesOwnedModels() {
-        val id = UUID.randomUUID()
+        val id = 3L
         val entity = ModelEntity(id = id, ownerUserId = "ada", name = "old", type = ModelType.LLM)
         val update = modelUpdateRequest("new", "ollama", ModelType.EMBEDDING, mapOf("model" to "nomic"), "desc")
         val response = sampleResponse(id, "new", ModelType.EMBEDDING)
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(modelRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
-        whenever(modelRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "new", id)).thenReturn(false)
+        whenever(modelRepository.existsByGroupNameAndNameAndCreatorAndIdNot("default", "new", "ada", id)).thenReturn(false)
         whenever(modelRepository.save(entity)).thenReturn(entity)
         whenever(modelMapper.toResponse(entity)).thenReturn(response)
 
@@ -115,7 +114,7 @@ class ModelServiceImplTest {
 
     @Test
     fun treatsMissingOwnedModelAsNotFound() {
-        val id = UUID.randomUUID()
+        val id = 4L
         whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
         whenever(modelRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(null)
 
@@ -126,6 +125,32 @@ class ModelServiceImplTest {
         assertFailsWith<ModelNotFoundException> { service.delete(id) }
     }
 
+    @Test
+    fun deletesEveryOwnedModelAndKeepsDuplicatesOnce() {
+        val first = ModelEntity(id = 8L, ownerUserId = "ada", name = "one", type = ModelType.LLM)
+        val second = ModelEntity(id = 9L, ownerUserId = "ada", name = "two", type = ModelType.LLM)
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+        whenever(modelRepository.findByIdAndOwnerUserId(8L, "ada")).thenReturn(first)
+        whenever(modelRepository.findByIdAndOwnerUserId(9L, "ada")).thenReturn(second)
+
+        service.deleteAll(listOf(8L, 9L, 8L))
+
+        verify(modelRepository).delete(first)
+        verify(modelRepository).delete(second)
+    }
+
+    @Test
+    fun rejectsBatchDeleteWhenAnyModelIsMissingOrTheListIsEmpty() {
+        val owned = ModelEntity(id = 8L, ownerUserId = "ada", name = "one", type = ModelType.LLM)
+        whenever(authenticatedUserIdResolver.requireUserId()).thenReturn("ada")
+        whenever(modelRepository.findByIdAndOwnerUserId(8L, "ada")).thenReturn(owned)
+        whenever(modelRepository.findByIdAndOwnerUserId(10L, "ada")).thenReturn(null)
+
+        assertFailsWith<ModelNotFoundException> { service.deleteAll(listOf(8L, 10L)) }
+        assertFailsWith<InvalidModelRequestException> { service.deleteAll(emptyList()) }
+        verify(modelRepository, never()).delete(any<ModelEntity>())
+    }
+
     private fun modelCreateRequest(
         name: String,
         provider: String,
@@ -133,6 +158,7 @@ class ModelServiceImplTest {
         configuration: Map<String, Any?> = emptyMap(),
         description: String? = null,
     ) = ModelCreateRequest().apply {
+        groupName = "default"
         this.name = name
         this.provider = provider
         this.type = type
@@ -147,6 +173,7 @@ class ModelServiceImplTest {
         configuration: Map<String, Any?> = emptyMap(),
         description: String? = null,
     ) = ModelUpdateRequest().apply {
+        groupName = "default"
         this.name = name
         this.provider = provider
         this.type = type
@@ -154,7 +181,7 @@ class ModelServiceImplTest {
         this.description = description
     }
 
-    private fun sampleResponse(id: UUID, name: String, type: ModelType): ModelResponse =
+    private fun sampleResponse(id: Long, name: String, type: ModelType): ModelResponse =
         ModelResponse(
             id = id,
             name = name,
@@ -173,7 +200,7 @@ class ModelServiceImplTest {
         override fun rollback(status: TransactionStatus) = Unit
     }
 
-    private fun ModelEntity.copyWithId(id: UUID): ModelEntity =
+    private fun ModelEntity.copyWithId(id: Long): ModelEntity =
         ModelEntity(
             id = id,
             ownerUserId = ownerUserId,
