@@ -24,17 +24,19 @@ local-deployment/.bootRun.env
 
 # Terraform
 terraform/.terraform/
+terraform/**/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.*
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
 terraform/crash.log
 terraform/*.tfvars
+terraform/**/*.tfvars
 !terraform/*.tfvars.example
+!terraform/**/*.tfvars.example
 
 # Generated local Compose UI staging
 local-deployment/ui-dist/
 local-deployment/ui-nginx.conf
 
 local-deployment/agentgo-app.jar
-local-deployment/ui-dist/
-local-deployment/ui-nginx.conf
-
