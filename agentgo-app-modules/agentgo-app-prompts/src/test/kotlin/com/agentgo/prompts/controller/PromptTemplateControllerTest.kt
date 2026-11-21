@@ -1,5 +1,6 @@
 package com.agentgo.prompts.controller
 
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.request.PageRequest
 import com.agentgo.commons.dto.http.response.PageResponse
 import com.agentgo.commons.dto.http.response.status.success.PromptsResponseCodeRegistry
@@ -9,12 +10,14 @@ import com.agentgo.dto.prompts.PromptTemplatePreviewRequest
 import com.agentgo.dto.prompts.PromptTemplateRenderRequest
 import com.agentgo.dto.prompts.PromptTemplateRenderResponse
 import com.agentgo.dto.prompts.PromptTemplateResponse
+import com.agentgo.dto.prompts.PromptTemplateRevisionResponse
 import com.agentgo.dto.prompts.PromptTemplateUpdateRequest
+import com.agentgo.dto.prompts.PromptTemplateVersions
+import com.agentgo.dto.workspace.WorkspaceColors
 import com.agentgo.prompts.service.PromptTemplateService
 import com.agentgo.starter.i18n.AgentGoMessages
 import java.time.Instant
 import java.util.Locale
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,6 +39,8 @@ class PromptTemplateControllerTest {
         addMessage("prompt.updated", Locale.ENGLISH, "Prompt template updated")
         addMessage("prompt.rendered", Locale.ENGLISH, "Prompt template rendered")
         addMessage("prompt.rendered", Locale.SIMPLIFIED_CHINESE, "提示词模板已渲染")
+        addMessage("prompt.revisionsListed", Locale.ENGLISH, "Prompt template revisions listed")
+        addMessage("prompt.revisionRetrieved", Locale.ENGLISH, "Prompt template revision retrieved")
     }
     private val controller = PromptTemplateController(promptTemplateService, AgentGoMessages(messageSource))
 
@@ -127,7 +132,7 @@ class PromptTemplateControllerTest {
 
     @Test
     fun `delete returns no content after the service removes the template`() {
-        val id = UUID.randomUUID()
+        val id = 1L
 
         val deleted = controller.delete(id)
 
@@ -137,9 +142,20 @@ class PromptTemplateControllerTest {
     }
 
     @Test
+    fun `deleteAll returns no content and delegates ids`() {
+        val request = BatchIdsRequest().apply { ids = listOf(3L, 4L) }
+
+        val deleted = controller.deleteAll(request)
+
+        assertEquals(HttpStatus.NO_CONTENT, deleted.statusCode)
+        assertNull(deleted.body)
+        verify(promptTemplateService).deleteAll(listOf(3L, 4L))
+    }
+
+    @Test
     fun `preview and render wrap rendered text with the rendered response code`() {
         LocaleContextHolder.setLocale(Locale.ENGLISH)
-        val id = UUID.randomUUID()
+        val id = 2L
         val rendered = PromptTemplateRenderResponse("Hello Ada")
         val preview = PromptTemplatePreviewRequest().apply {
             engine = PromptEngine.SIMPLE
@@ -162,13 +178,55 @@ class PromptTemplateControllerTest {
     @Test
     fun `render returns localized chinese message when accept language is zh-CN`() {
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE)
-        val id = UUID.randomUUID()
+        val id = 3L
         val request = PromptTemplateRenderRequest()
         whenever(promptTemplateService.render(id, request)).thenReturn(PromptTemplateRenderResponse("ok"))
 
         val rendered = controller.render(id, request)
 
         assertEquals("提示词模板已渲染", rendered.message)
+    }
+
+    @Test
+    fun `revision endpoints wrap the service page and one revision`() {
+        LocaleContextHolder.setLocale(Locale.ENGLISH)
+        val templateId = 4L
+        val request = PageRequest()
+        val revision = PromptTemplateRevisionResponse(
+            id = 5L,
+            templateId = templateId,
+            version = "1",
+            revision = 1,
+            message = "Initial commit",
+            author = "ada",
+            diff = "+Hello",
+            groupName = "chat",
+            name = "Greeting",
+            engine = PromptEngine.SIMPLE,
+            content = "Hello",
+            createdAt = Instant.parse("2026-01-01T00:00:00Z"),
+        )
+        val page = PageResponse(
+            data = listOf(revision),
+            pageSize = 20,
+            totalElements = 1,
+            totalPages = 1,
+            empty = false,
+            first = true,
+            last = true,
+            size = 1,
+            number = 1,
+        )
+        whenever(promptTemplateService.listRevisions(templateId, request)).thenReturn(page)
+        whenever(promptTemplateService.getRevision(templateId, "latest")).thenReturn(revision)
+
+        val listed = controller.listRevisions(templateId, request)
+        val retrieved = controller.getRevision(templateId, "latest")
+
+        assertEquals(PromptsResponseCodeRegistry.REVISIONS_LISTED, listed.code)
+        assertEquals("Prompt template revisions listed", listed.message)
+        assertEquals(PromptsResponseCodeRegistry.REVISION_RETRIEVED, retrieved.code)
+        assertEquals("1", retrieved.data?.version)
     }
 
     private fun sampleCreate() = PromptTemplateCreateRequest().apply {
@@ -186,11 +244,15 @@ class PromptTemplateControllerTest {
     }
 
     private fun sampleResponse() = PromptTemplateResponse(
-        id = UUID.randomUUID(),
+        id = 6L,
+        groupName = "chat",
         name = "Default system",
+        version = PromptTemplateVersions.LATEST,
+        revision = 1,
         engine = PromptEngine.SIMPLE,
         content = "Hello {{ name }}",
         description = "Greeting",
+        metadata = com.agentgo.dto.prompts.PromptTemplateMetadata().apply { color = WorkspaceColors.DEFAULT },
         createdAt = Instant.parse("2026-01-01T00:00:00Z"),
         updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
     )

@@ -18,7 +18,7 @@ class PromptTemplateExceptionHandlerTest {
     private val messageSource = StaticMessageSource().apply {
         addMessage("PROMPT-001", Locale.ENGLISH, "The requested prompt template was not found.")
         addMessage("PROMPT-001", Locale.SIMPLIFIED_CHINESE, "未找到请求的提示词模板。")
-        addMessage("PROMPT-003", Locale.ENGLISH, "A prompt template with this name already exists for this user.")
+        addMessage("PROMPT-003", Locale.ENGLISH, "A prompt template with this group, name, and creator already exists.")
         addMessage("PROMPT-004", Locale.ENGLISH, "The prompt template could not be rendered.")
         addMessage("PROMPT-005", Locale.ENGLISH, "You do not have access to this prompt template.")
     }

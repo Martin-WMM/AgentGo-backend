@@ -1,5 +1,6 @@
 package com.agentgo.prompts.dto
 
+import com.agentgo.dto.presentation.IconSource
 import com.agentgo.dto.prompts.PromptEngine
 import com.agentgo.dto.prompts.PromptTemplateCreateRequest
 import com.agentgo.dto.prompts.PromptTemplatePreviewRequest
@@ -23,25 +24,38 @@ class PromptTemplateRequestJsonTest {
         val request = jsonMapper.readValue(
             """
             {
+              "groupName": "chat",
               "name": "Greeting",
               "engine": "SIMPLE",
               "content": "Hello {{ name }}",
-              "description": "User greeting"
+              "description": "User greeting",
+              "message": "Initial commit",
+              "tags": ["system"],
+              "metadata": {
+                "color": "#1D4ED8",
+                "icon": { "source": "ICONIFY", "value": "lucide:bot" }
+              }
             }
             """.trimIndent(),
             PromptTemplateCreateRequest::class.java,
         )
 
+        assertEquals("chat", request.groupName)
         assertEquals("Greeting", request.name)
         assertEquals(PromptEngine.SIMPLE, request.engine)
         assertEquals("Hello {{ name }}", request.content)
         assertEquals("User greeting", request.description)
+        assertEquals("Initial commit", request.message)
+        assertEquals(listOf("system"), request.tags)
+        assertEquals("#1D4ED8", request.metadata?.color)
+        assertEquals(IconSource.ICONIFY, request.metadata?.icon?.source)
+        assertEquals("lucide:bot", request.metadata?.icon?.value)
     }
 
     @Test
     fun `reads update preview and render requests`() {
         val update = jsonMapper.readValue(
-            """{"name":"Greeting","engine":"JINJA2","content":"Hello {{ name }}"}""",
+            """{"groupName":"chat","name":"Greeting","engine":"JINJA2","content":"Hello {{ name }}","message":"Revise prompt"}""",
             PromptTemplateUpdateRequest::class.java,
         )
         val preview = jsonMapper.readValue(
@@ -53,8 +67,10 @@ class PromptTemplateRequestJsonTest {
             PromptTemplateRenderRequest::class.java,
         )
 
+        assertEquals("chat", update.groupName)
         assertEquals(PromptEngine.JINJA2, update.engine)
         assertNull(update.description)
+        assertEquals("Revise prompt", update.message)
         assertEquals("Ada", preview.variables["name"])
         assertEquals("Ada", render.variables["name"])
     }
