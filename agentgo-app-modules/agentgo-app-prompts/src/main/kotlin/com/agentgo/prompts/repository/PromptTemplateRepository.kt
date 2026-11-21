@@ -1,7 +1,6 @@
 package com.agentgo.prompts.repository
 
 import com.agentgo.prompts.entity.PromptTemplateEntity
-import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -12,7 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository
  * Query methods intentionally require an owner identifier so callers cannot load
  * another user's templates by id alone.
  */
-interface PromptTemplateRepository : JpaRepository<PromptTemplateEntity, UUID> {
+interface PromptTemplateRepository : JpaRepository<PromptTemplateEntity, Long> {
     /**
      * Finds a template owned by [ownerUserId].
      *
@@ -20,7 +19,7 @@ interface PromptTemplateRepository : JpaRepository<PromptTemplateEntity, UUID> {
      * @param ownerUserId authenticated owner
      * @return matching entity, or `null` when absent
      */
-    fun findByIdAndOwnerUserId(id: UUID, ownerUserId: String): PromptTemplateEntity?
+    fun findByIdAndOwnerUserId(id: Long, ownerUserId: String): PromptTemplateEntity?
 
     /**
      * Returns one page of templates owned by [ownerUserId].
@@ -34,28 +33,32 @@ interface PromptTemplateRepository : JpaRepository<PromptTemplateEntity, UUID> {
     fun findByOwnerUserId(ownerUserId: String, pageable: Pageable): Page<PromptTemplateEntity>
 
     /**
-     * Returns whether the owner already has a template named [name].
+     * Returns whether [creator] already has [name] inside [groupName].
      *
-     * @param ownerUserId authenticated owner
+     * @param groupName template group
      * @param name candidate template name
+     * @param creator authenticated creator stored on the row
      * @return `true` when a conflicting row exists
      */
-    fun existsByOwnerUserIdAndName(
-        ownerUserId: String,
+    fun existsByGroupNameAndNameAndCreator(
+        groupName: String,
         name: String,
+        creator: String,
     ): Boolean
 
     /**
-     * Returns whether the owner already has another template named [name].
+     * Returns whether [creator] already has another [name] inside [groupName].
      *
-     * @param ownerUserId authenticated owner
+     * @param groupName template group
      * @param name candidate template name
+     * @param creator authenticated creator stored on the row
      * @param id template identifier to exclude from the uniqueness check
      * @return `true` when a conflicting row exists
      */
-    fun existsByOwnerUserIdAndNameAndIdNot(
-        ownerUserId: String,
+    fun existsByGroupNameAndNameAndCreatorAndIdNot(
+        groupName: String,
         name: String,
-        id: UUID,
+        creator: String,
+        id: Long,
     ): Boolean
 }
