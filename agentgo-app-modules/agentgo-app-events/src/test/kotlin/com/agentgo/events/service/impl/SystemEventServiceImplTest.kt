@@ -238,3 +238,159 @@ class SystemEventServiceImplTest {
         verify(builder).and(domainPredicate)
     }
 
+    @Test
+    fun `list applies an operator-only filter specification`() {
+        whenever(resolver.requireUserId()).thenReturn("ada")
+        val specification = argumentCaptor<Specification<SystemEventEntity>>()
+        whenever(repository.findAll(specification.capture(), any<Pageable>()))
+            .thenReturn(PageImpl(emptyList()))
+
+        service.list(PageRequest(), null, "ada")
+
+        val root = mock<jakarta.persistence.criteria.Root<SystemEventEntity>>()
+        val query = mock<jakarta.persistence.criteria.CriteriaQuery<*>>()
+        val builder = mock<jakarta.persistence.criteria.CriteriaBuilder>()
+        val operatorPath = mock<jakarta.persistence.criteria.Path<String>>()
+        val operatorPredicate = mock<jakarta.persistence.criteria.Predicate>()
+        val combined = mock<jakarta.persistence.criteria.Predicate>()
+        whenever(root.get<String>("operatorName")).thenReturn(operatorPath)
+        whenever(builder.equal(operatorPath, "ada")).thenReturn(operatorPredicate)
+        whenever(builder.and(operatorPredicate)).thenReturn(combined)
+        specification.firstValue.toPredicate(root, query, builder)
+        verify(builder).equal(operatorPath, "ada")
+        verify(builder).and(operatorPredicate)
+    }
+
+    @Test
+    fun `list rejects a page size above one hundred`() {
+        whenever(resolver.requireUserId()).thenReturn("ada")
+
+        assertFailsWith<InvalidSystemEventRequestException> {
+            service.list(PageRequest(size = 101), null, null)
+        }
+
+        verify(repository, never()).findAll(any<Pageable>())
+    }
+
+    @Test
+    fun `list rejects an unknown sort field`() {
+        whenever(resolver.requireUserId()).thenReturn("ada")
+
+        assertFailsWith<InvalidSystemEventRequestException> {
+            service.list(PageRequest(sort = listOf("comment")), null, null)
+        }
+    }
+
+    @Test
+    fun `update replaces fields and keeps the stored time when it is omitted`() {
+        val entity = stored(comment = "before")
+        whenever(resolver.requireUserId()).thenReturn("grace")
+        whenever(repository.findById(entity.id!!)).thenReturn(Optional.of(entity))
+        whenever(repository.count()).thenReturn(1)
+
+        val response = service.update(
+            entity.id!!,
+            SystemEventUpdateRequest().apply {
+                name = " Model renamed "
+                domain = " models "
+                `operator` = "  "
+                comment = "   "
+            },
+        )
+
+        assertEquals("Model renamed", response.name)
+        assertEquals("models", response.domain)
+        assertEquals("grace", response.`operator`)
+        assertNull(response.comment)
+        assertEquals(entity.occurredAt, response.occurredAt)
+    }
+
+    @Test
+    fun `update rejects an unknown id`() {
+        val id = 2L
+        whenever(resolver.requireUserId()).thenReturn("ada")
+        whenever(repository.findById(id)).thenReturn(Optional.empty())
+
+        assertFailsWith<SystemEventNotFoundException> {
+            service.update(id, SystemEventUpdateRequest().apply {
+                name = "Missing"
+                domain = "models"
+            })
+        }
+
+        verify(repository, never()).deleteOlderThan(any())
+    }
+
+    @Test
+    fun `delete removes the stored event`() {
+        val entity = stored()
+        whenever(resolver.requireUserId()).thenReturn("ada")
+        whenever(repository.findById(entity.id!!)).thenReturn(Optional.of(entity))
+
+        service.delete(entity.id!!)
+
+        verify(repository).delete(entity)
+    }
+
+    @Test
+    fun `delete rejects an unknown id`() {
+        val id = 3L
+        whenever(resolver.requireUserId()).thenReturn("ada")
+        whenever(repository.findById(id)).thenReturn(Optional.empty())
+
+        assertFailsWith<SystemEventNotFoundException> { service.delete(id) }
+        verify(repository, never()).delete(any<SystemEventEntity>())
+    }
+
+    @Test
+    fun `enforceRetention deletes expired rows and the oldest rows beyond one thousand`() {
+        val oldest = stored(name = "oldest")
+        whenever(repository.count()).thenReturn(1001, 1000)
+        whenever(repository.findAll(any<Pageable>())).thenReturn(PageImpl(listOf(oldest)))
+
+        service.enforceRetention()
+
+        verify(repository).deleteOlderThan(Instant.parse("2026-07-26T12:00:00Z"))
+        verify(repository).deleteAll(listOf(oldest))
+    }
+
+    private fun stored(
+        name: String = "Model created",
+        comment: String? = "Created the default model.",
+    ) = SystemEventEntity(
+        id = 4L,
+        name = name,
+        domain = "models",
+        operatorName = "ada",
+        comment = comment,
+        occurredAt = now,
+        creator = "ada",
+        createdAt = now,
+        updatedAt = now,
+        updatedBy = "ada",
+    )
+
+    private fun stamp(entity: SystemEventEntity): SystemEventEntity {
+        entity.id = entity.id ?: 5L
+        entity.createdAt = entity.createdAt ?: now
+        entity.updatedAt = entity.updatedAt ?: now
+        entity.creator = entity.creator ?: "ada"
+        entity.updatedBy = entity.updatedBy ?: "ada"
+        return entity
+    }
+
+    private fun unauthenticated() = SystemEventException(
+        code = 1002,
+        responseType = "AUTH-002",
+        status = HttpStatus.UNAUTHORIZED,
+        message = "Authentication is required.",
+    )
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
+    }
+}
