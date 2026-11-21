@@ -1,9 +1,12 @@
 package com.agentgo.models.service.impl
 
+import com.agentgo.commons.dto.http.request.BatchIds
 import com.agentgo.dto.models.ModelCreateRequest
 import com.agentgo.dto.models.ModelResponse
 import com.agentgo.dto.models.ModelType
 import com.agentgo.dto.models.ModelUpdateRequest
+import com.agentgo.events.annotation.RecordSystemEvent
+import com.agentgo.events.domain.SystemEventDomains
 import com.agentgo.models.exception.DuplicateModelNameException
 import com.agentgo.models.exception.InvalidModelRequestException
 import com.agentgo.models.exception.ModelNotFoundException
@@ -11,7 +14,6 @@ import com.agentgo.models.mapper.ModelMapper
 import com.agentgo.models.repository.ModelRepository
 import com.agentgo.models.security.AuthenticatedUserIdResolver
 import com.agentgo.models.service.ModelService
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -38,11 +40,22 @@ class ModelServiceImpl(
         isReadOnly = true
     }
 
+    @RecordSystemEvent(
+        domain = SystemEventDomains.MODELS,
+        name = "Model created",
+        comment = "Created model #{#result.name} (#{#result.id})",
+    )
     override fun create(request: ModelCreateRequest): ModelResponse {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
         val normalized = normalizeCreate(request)
         return write {
-            if (modelRepository.existsByOwnerUserIdAndName(ownerUserId, normalized.name)) {
+            if (
+                modelRepository.existsByGroupNameAndNameAndCreator(
+                    normalized.groupName,
+                    normalized.name,
+                    ownerUserId,
+                )
+            ) {
                 throw DuplicateModelNameException()
             }
             val saved = modelRepository.save(modelMapper.toEntity(ownerUserId, normalized))
@@ -51,7 +64,7 @@ class ModelServiceImpl(
         }
     }
 
-    override fun get(id: UUID): ModelResponse {
+    override fun get(id: Long): ModelResponse {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
         return read {
             val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
@@ -72,13 +85,26 @@ class ModelServiceImpl(
         }
     }
 
-    override fun update(id: UUID, request: ModelUpdateRequest): ModelResponse {
+    @RecordSystemEvent(
+        domain = SystemEventDomains.MODELS,
+        name = "Model updated",
+        comment = "Updated model #{#result.name} (#{#id})",
+    )
+    override fun update(id: Long, request: ModelUpdateRequest): ModelResponse {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
         val normalized = normalizeUpdate(request)
         return write {
             val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
                 ?: throw ModelNotFoundException()
-            if (modelRepository.existsByOwnerUserIdAndNameAndIdNot(ownerUserId, normalized.name, id)) {
+            val creator = entity.creator?.takeIf { it.isNotBlank() } ?: ownerUserId
+            if (
+                modelRepository.existsByGroupNameAndNameAndCreatorAndIdNot(
+                    normalized.groupName,
+                    normalized.name,
+                    creator,
+                    id,
+                )
+            ) {
                 throw DuplicateModelNameException()
             }
             modelMapper.applyUpdate(entity, normalized)
@@ -88,7 +114,12 @@ class ModelServiceImpl(
         }
     }
 
-    override fun delete(id: UUID) {
+    @RecordSystemEvent(
+        domain = SystemEventDomains.MODELS,
+        name = "Model deleted",
+        comment = "Deleted model #{#id}",
+    )
+    override fun delete(id: Long) {
         val ownerUserId = authenticatedUserIdResolver.requireUserId()
         write {
             val entity = modelRepository.findByIdAndOwnerUserId(id, ownerUserId)
@@ -97,8 +128,25 @@ class ModelServiceImpl(
         }
     }
 
+    @RecordSystemEvent(
+        domain = SystemEventDomains.MODELS,
+        name = "Models deleted",
+        comment = "Deleted #{#ids.size()} models",
+    )
+    override fun deleteAll(ids: List<Long>) {
+        val ownerUserId = authenticatedUserIdResolver.requireUserId()
+        val distinct = BatchIds.requireDistinctOr(ids) { InvalidModelRequestException(it) }
+        write {
+            val entities = distinct.map { id ->
+                modelRepository.findByIdAndOwnerUserId(id, ownerUserId) ?: throw ModelNotFoundException()
+            }
+            entities.forEach(modelRepository::delete)
+        }
+    }
+
     private fun normalizeCreate(request: ModelCreateRequest): ModelCreateRequest =
         ModelCreateRequest().apply {
+            groupName = normalizeGroup(request.groupName)
             name = requireText(request.name, "name")
             provider = requireText(request.provider, "provider")
             type = requireType(request.type)
@@ -108,12 +156,24 @@ class ModelServiceImpl(
 
     private fun normalizeUpdate(request: ModelUpdateRequest): ModelUpdateRequest =
         ModelUpdateRequest().apply {
+            groupName = normalizeGroup(request.groupName)
             name = requireText(request.name, "name")
             provider = requireText(request.provider, "provider")
             type = requireType(request.type)
             configuration = request.configuration
             description = normalizeDescription(request.description)
         }
+
+    private fun normalizeGroup(value: String): String {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) {
+            return "default"
+        }
+        if (trimmed.length > 255) {
+            throw InvalidModelRequestException("The model groupName must be at most 255 characters.")
+        }
+        return trimmed
+    }
 
     private fun requireType(type: ModelType?): ModelType =
         type ?: throw InvalidModelRequestException("The model type is required.")
