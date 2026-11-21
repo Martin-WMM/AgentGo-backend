@@ -1,6 +1,9 @@
 package com.agentgo.dto.prompts
 
+import com.agentgo.commons.validation.TrimmedNotBlank
+import com.agentgo.commons.validation.TrimmedSize
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.NotNull
 
 /**
  * Unsaved template and variables used to preview rendering.
@@ -17,6 +20,7 @@ import io.swagger.v3.oas.annotations.media.Schema
         "engine and content with variables and does not write a row.",
 )
 class PromptTemplatePreviewRequest {
+    @field:NotNull
     @field:Schema(
         description = "Template engine",
         example = "SIMPLE",
@@ -24,6 +28,8 @@ class PromptTemplatePreviewRequest {
     )
     var engine: PromptEngine? = null
 
+    @field:TrimmedNotBlank
+    @field:TrimmedSize(min = 1, max = 100000)
     @field:Schema(
         description = "Template body to preview",
         example = "Hello {{ name }}",
