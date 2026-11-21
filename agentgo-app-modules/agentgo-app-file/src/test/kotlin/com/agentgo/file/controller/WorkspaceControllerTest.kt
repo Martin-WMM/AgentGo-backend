@@ -1,5 +1,6 @@
 package com.agentgo.file.controller
 
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.status.success.WorkspaceResponseCodeRegistry
 import com.agentgo.dto.workspace.WorkspaceCreateRequest
 import com.agentgo.dto.workspace.WorkspaceResponse
@@ -8,7 +9,6 @@ import com.agentgo.file.service.WorkspaceService
 import com.agentgo.starter.i18n.AgentGoMessages
 import java.time.Instant
 import java.util.Locale
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -47,7 +47,7 @@ class WorkspaceControllerTest {
             name = "Reports"
             description = "Quarterly drafts"
         }
-        val response = sampleResponse(UUID.randomUUID(), "Reports", "Quarterly drafts")
+        val response = sampleResponse(1L, "Reports", "Quarterly drafts")
         whenever(workspaceService.create(request)).thenReturn(response)
 
         val created = controller.create(request)
@@ -63,7 +63,7 @@ class WorkspaceControllerTest {
     fun `create returns localized chinese message when accept language is zh-CN`() {
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE)
         val request = WorkspaceCreateRequest().apply { name = "报告" }
-        val response = sampleResponse(UUID.randomUUID(), "报告", null)
+        val response = sampleResponse(2L, "报告", null)
         whenever(workspaceService.create(request)).thenReturn(response)
 
         val created = controller.create(request)
@@ -75,7 +75,7 @@ class WorkspaceControllerTest {
     @Test
     fun `get wraps service result with retrieved response code`() {
         LocaleContextHolder.setLocale(Locale.ENGLISH)
-        val id = UUID.randomUUID()
+        val id = 3L
         val response = sampleResponse(id, "Reports", null)
         whenever(workspaceService.get(id)).thenReturn(response)
 
@@ -90,7 +90,7 @@ class WorkspaceControllerTest {
     @Test
     fun `list wraps service result with list retrieved response code`() {
         LocaleContextHolder.setLocale(Locale.ENGLISH)
-        val response = sampleResponse(UUID.randomUUID(), "Reports", null)
+        val response = sampleResponse(4L, "Reports", null)
         whenever(workspaceService.list()).thenReturn(listOf(response))
 
         val listed = controller.list()
@@ -104,7 +104,7 @@ class WorkspaceControllerTest {
     @Test
     fun `update wraps service result with updated response code`() {
         LocaleContextHolder.setLocale(Locale.ENGLISH)
-        val id = UUID.randomUUID()
+        val id = 5L
         val request = WorkspaceUpdateRequest().apply {
             name = "Reports"
             description = "Updated"
@@ -122,7 +122,7 @@ class WorkspaceControllerTest {
 
     @Test
     fun `delete returns http 204 and delegates to service`() {
-        val id = UUID.randomUUID()
+        val id = 6L
 
         val deleted = controller.delete(id)
 
@@ -131,7 +131,18 @@ class WorkspaceControllerTest {
         verify(workspaceService).delete(id)
     }
 
-    private fun sampleResponse(id: UUID, name: String, description: String?): WorkspaceResponse =
+    @Test
+    fun `deleteAll returns http 204 and delegates ids`() {
+        val request = BatchIdsRequest().apply { ids = listOf(7L, 8L) }
+
+        val deleted = controller.deleteAll(request)
+
+        assertEquals(HttpStatus.NO_CONTENT, deleted.statusCode)
+        assertNull(deleted.body)
+        verify(workspaceService).deleteAll(listOf(7L, 8L))
+    }
+
+    private fun sampleResponse(id: Long, name: String, description: String?): WorkspaceResponse =
         WorkspaceResponse(
             id = id,
             name = name,
