@@ -7,5 +7,6 @@ tasks.named<Jar>("jar") {
 }
 
 dependencies {
+    api(project(":agentgo-dto"))
     api("org.springdoc:springdoc-openapi-starter-common:${rootProject.extra["springdocVersion"]}")
 }

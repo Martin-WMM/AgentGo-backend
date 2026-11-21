@@ -1,7 +1,6 @@
 package com.agentgo.dto.mcp
 
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -87,7 +86,7 @@ class McpServerDtoTest {
         val updatedAt = Instant.parse("2026-10-11T01:00:00Z")
         val tool = McpToolSummary(name = "search", description = "Search the knowledge base")
         val response = McpServerResponse(
-            id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
+            id = 1L,
             name = "docs-tools",
             transport = McpTransport.STREAMABLE_HTTP,
             endpointUrl = "https://mcp.example.com/mcp",

@@ -17,7 +17,15 @@ import io.swagger.v3.oas.annotations.media.Schema
 @Schema(description = "Request body for updating a user-owned model configuration")
 class ModelUpdateRequest {
     @field:Schema(
-        description = "Human-readable model name unique for the authenticated user",
+        description = "Group name. Unique together with name and the creator. Blank becomes default.",
+        example = "default",
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+        maxLength = 255,
+    )
+    var groupName: String = ""
+
+    @field:Schema(
+        description = "Human-readable model name, unique with groupName and the creator",
         example = "gpt-4o-mini",
         requiredMode = Schema.RequiredMode.REQUIRED,
         maxLength = 255,
@@ -56,7 +64,8 @@ class ModelUpdateRequest {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ModelUpdateRequest) return false
-        return name == other.name &&
+        return groupName == other.groupName &&
+            name == other.name &&
             provider == other.provider &&
             type == other.type &&
             configuration == other.configuration &&
@@ -64,7 +73,8 @@ class ModelUpdateRequest {
     }
 
     override fun hashCode(): Int {
-        var result = name.hashCode()
+        var result = groupName.hashCode()
+        result = 31 * result + name.hashCode()
         result = 31 * result + provider.hashCode()
         result = 31 * result + (type?.hashCode() ?: 0)
         result = 31 * result + configuration.hashCode()
