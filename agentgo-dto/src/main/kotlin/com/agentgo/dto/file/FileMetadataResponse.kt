@@ -2,12 +2,11 @@ package com.agentgo.dto.file
 
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
-import java.util.UUID
 
 @Schema(description = "Metadata for an object stored in AgentGo MinIO storage")
 data class FileMetadataResponse(
-    @field:Schema(description = "File metadata identifier", format = "uuid")
-    val id: UUID,
+    @field:Schema(description = "File metadata identifier", format = "int64")
+    val id: Long,
     @field:Schema(description = "MinIO bucket name", example = "agentgo-bucket")
     val bucketName: String,
     @field:Schema(description = "MinIO object key", example = "workspace/owner-hash/notes.md")
