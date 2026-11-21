@@ -1,6 +1,8 @@
 package com.agentgo.commons.dto.http.response.status
 
 import com.agentgo.commons.dto.http.response.status.error.ErrorResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.A2aResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.EventsResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.FileResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.McpResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.ModelsResponseCodeRegistry
@@ -22,6 +24,10 @@ class ResponseCodeRegistryTest {
         assertEquals("PROMPT", ErrorResponseCodeRegistry.description("PROMPT-001")?.category)
         assertEquals("MCP", ErrorResponseCodeRegistry.description("MCP-001")?.category)
         assertEquals("MCP", ErrorResponseCodeRegistry.description("MCP-006")?.category)
+        assertEquals("EVENT", ErrorResponseCodeRegistry.description("EVENT-001")?.category)
+        assertEquals("EVENT", ErrorResponseCodeRegistry.description("EVENT-002")?.category)
+        assertEquals("A2A", ErrorResponseCodeRegistry.description("A2A-001")?.category)
+        assertEquals("A2A", ErrorResponseCodeRegistry.description("A2A-003")?.category)
     }
 
     @Test
@@ -50,6 +56,10 @@ class ResponseCodeRegistryTest {
             "MCP",
             McpResponseCodeRegistry.codeDescriptions[McpResponseCodeRegistry.CREATED_TYPE]?.category,
         )
+        assertEquals(
+            "EVENT",
+            EventsResponseCodeRegistry.codeDescriptions[EventsResponseCodeRegistry.CREATED_TYPE]?.category,
+        )
     }
 
     @Test
@@ -70,6 +80,12 @@ class ResponseCodeRegistryTest {
         assertEquals("PROMPT-001", ResponseCodeRegistry.responseType(9001))
         assertEquals("PROMPT-RENDERED", ResponseCodeRegistry.responseType(9205))
         assertEquals("A prompt template was rendered successfully.", ResponseCodeRegistry.description(9205)?.meaning)
+        assertEquals("PROMPT-REVISIONS-LISTED", ResponseCodeRegistry.responseType(9206))
+        assertEquals("PROMPT-REVISION-RETRIEVED", ResponseCodeRegistry.responseType(9207))
+        assertEquals(
+            "A prompt template revision was retrieved successfully.",
+            ResponseCodeRegistry.description(9207)?.meaning,
+        )
         assertEquals("SETTINGS-RETRIEVED", ResponseCodeRegistry.responseType(9400))
         assertEquals("SETTINGS-UPDATED", ResponseCodeRegistry.responseType(9401))
         assertEquals(
@@ -83,6 +99,24 @@ class ResponseCodeRegistryTest {
         assertEquals(
             "A user-owned MCP server was created successfully.",
             ResponseCodeRegistry.description(9601)?.meaning,
+        )
+        assertEquals("EVENT-001", ResponseCodeRegistry.responseType(9701))
+        assertEquals("EVENT-002", ResponseCodeRegistry.responseType(9702))
+        assertEquals("EVENT-CREATED", ResponseCodeRegistry.responseType(9801))
+        assertEquals(
+            "A global system event was created successfully.",
+            ResponseCodeRegistry.description(9801)?.meaning,
+        )
+        assertEquals("A2A-001", ResponseCodeRegistry.responseType(9931))
+        assertEquals("A2A-003", ResponseCodeRegistry.responseType(9933))
+        assertEquals("A2A-CREATED", ResponseCodeRegistry.responseType(9901))
+        assertEquals(
+            "A user-owned A2A agent was created successfully.",
+            ResponseCodeRegistry.description(9901)?.meaning,
+        )
+        assertEquals(
+            "A2A",
+            A2aResponseCodeRegistry.codeDescriptions[A2aResponseCodeRegistry.CREATED_TYPE]?.category,
         )
     }
 }
