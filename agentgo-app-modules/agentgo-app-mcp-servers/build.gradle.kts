@@ -25,6 +25,7 @@ dependencies {
     api(project(":agentgo-commons"))
     api(project(":agentgo-dto:agentgo-dto-mcp"))
     api(project(":agentgo-app-modules:agentgo-persistence-starter"))
+    implementation(project(":agentgo-app-modules:agentgo-app-events"))
     implementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-security")

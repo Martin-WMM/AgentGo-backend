@@ -1,5 +1,6 @@
 package com.agentgo.mcp.controller
 
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.commons.dto.http.response.status.success.McpResponseCodeRegistry
 import com.agentgo.dto.mcp.McpServerCreateRequest
@@ -8,7 +9,6 @@ import com.agentgo.dto.mcp.McpServerStatus
 import com.agentgo.dto.mcp.McpServerUpdateRequest
 import com.agentgo.mcp.controller.apidoc.McpServerControllerApiDoc
 import com.agentgo.mcp.service.McpServerService
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.RestController
 
@@ -27,7 +27,7 @@ class McpServerController(
             data = mcpServerService.create(request),
         )
 
-    override fun get(id: UUID): CommonHttpResponse<McpServerResponse> =
+    override fun get(id: Long): CommonHttpResponse<McpServerResponse> =
         CommonHttpResponse(
             code = McpResponseCodeRegistry.RETRIEVED,
             responseType = McpResponseCodeRegistry.RETRIEVED_TYPE,
@@ -43,7 +43,7 @@ class McpServerController(
             data = mcpServerService.list(status),
         )
 
-    override fun update(id: UUID, request: McpServerUpdateRequest): CommonHttpResponse<McpServerResponse> =
+    override fun update(id: Long, request: McpServerUpdateRequest): CommonHttpResponse<McpServerResponse> =
         CommonHttpResponse(
             code = McpResponseCodeRegistry.UPDATED,
             responseType = McpResponseCodeRegistry.UPDATED_TYPE,
@@ -51,12 +51,17 @@ class McpServerController(
             data = mcpServerService.update(id, request),
         )
 
-    override fun delete(id: UUID): ResponseEntity<Void> {
+    override fun delete(id: Long): ResponseEntity<Void> {
         mcpServerService.delete(id)
         return ResponseEntity.noContent().build()
     }
 
-    override fun probe(id: UUID): CommonHttpResponse<McpServerResponse> =
+    override fun deleteAll(request: BatchIdsRequest): ResponseEntity<Void> {
+        mcpServerService.deleteAll(request.ids.orEmpty())
+        return ResponseEntity.noContent().build()
+    }
+
+    override fun probe(id: Long): CommonHttpResponse<McpServerResponse> =
         CommonHttpResponse(
             code = McpResponseCodeRegistry.PROBED,
             responseType = McpResponseCodeRegistry.PROBED_TYPE,

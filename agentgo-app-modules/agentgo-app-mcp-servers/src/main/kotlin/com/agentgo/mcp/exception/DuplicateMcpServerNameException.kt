@@ -7,5 +7,5 @@ class DuplicateMcpServerNameException : McpException(
     code = 9503,
     responseType = "MCP-003",
     status = HttpStatus.CONFLICT,
-    message = "An MCP server with this name already exists.",
+    message = "An MCP server with this group and name already exists.",
 )

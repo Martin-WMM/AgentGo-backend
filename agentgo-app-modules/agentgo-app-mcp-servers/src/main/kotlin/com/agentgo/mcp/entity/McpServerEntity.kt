@@ -12,8 +12,8 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.Instant
-import java.util.UUID
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedBy
@@ -30,15 +30,26 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
  * Local/stdio transports are intentionally unsupported.
  */
 @Entity
-@Table(name = "tbl_mcp_server")
+@Table(
+    name = "tbl_mcp_server",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uq_tbl_mcp_server_group_name_name_creator",
+            columnNames = ["group_name", "name", "creator"],
+        ),
+    ],
+)
 @EntityListeners(AuditingEntityListener::class)
 class McpServerEntity(
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    var id: UUID? = null,
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null,
 
     @Column(name = "owner_user_id", nullable = false, updatable = false, length = 255)
     var ownerUserId: String = "",
+
+    @Column(name = "group_name", nullable = false, length = 255)
+    var groupName: String = "default",
 
     @Column(name = "name", nullable = false, length = 255)
     var name: String = "",

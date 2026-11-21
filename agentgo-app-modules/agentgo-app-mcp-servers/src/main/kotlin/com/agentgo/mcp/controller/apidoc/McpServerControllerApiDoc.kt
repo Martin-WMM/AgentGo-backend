@@ -1,6 +1,7 @@
 package com.agentgo.mcp.controller.apidoc
 
 import com.agentgo.commons.api.ApiPaths
+import com.agentgo.commons.dto.http.request.BatchIdsRequest
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
 import com.agentgo.dto.mcp.McpServerCreateRequest
 import com.agentgo.dto.mcp.McpServerResponse
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import java.util.UUID
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam
     name = "MCP Servers",
     description = "Versioned user-owned MCP Streamable HTTP servers at /api/v1/mcpServers. " +
         "Local/stdio transports are unsupported. Every server belongs to the authenticated user; " +
-        "clients must not send a user id. name is unique per owner (HTTP 409, MCP-003). " +
+        "clients must not send a user id. groupName, name, and creator are unique (HTTP 409, MCP-003). " +
         "transport must be STREAMABLE_HTTP. endpointUrl is the single MCP POST/GET endpoint. " +
         "authType is NONE, BEARER, or HEADER. Probe performs initialize + tools/list and caches tools. " +
         "Success codes are 9600 through 9605. MCP-001 is not found, MCP-002 is invalid, " +
@@ -70,7 +70,7 @@ interface McpServerControllerApiDoc {
     @GetMapping("/{id}")
     fun get(
         @Parameter(description = "MCP server identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): CommonHttpResponse<McpServerResponse>
 
     @Operation(
@@ -106,7 +106,7 @@ interface McpServerControllerApiDoc {
     @PutMapping("/{id}")
     fun update(
         @Parameter(description = "MCP server identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
         @RequestBody request: McpServerUpdateRequest,
     ): CommonHttpResponse<McpServerResponse>
 
@@ -124,8 +124,25 @@ interface McpServerControllerApiDoc {
     @DeleteMapping("/{id}")
     fun delete(
         @Parameter(description = "MCP server identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): ResponseEntity<Void>
+
+    @Operation(
+        summary = "Delete MCP servers owned by the authenticated user",
+        description = "Deletes every listed MCP server in one transaction and returns HTTP 204. " +
+            "An empty list, more than 100 ids, a non-positive id, or any missing id rejects the " +
+            "request and deletes nothing. Another user's id is not found.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "MCP servers deleted"),
+            ApiResponse(responseCode = "400", description = "Invalid id list (MCP-002)"),
+            ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
+            ApiResponse(responseCode = "404", description = "MCP server not found (MCP-001)"),
+        ],
+    )
+    @PostMapping("/batch-delete")
+    fun deleteAll(@RequestBody request: BatchIdsRequest): ResponseEntity<Void>
 
     @Operation(
         summary = "Probe an MCP Streamable HTTP server",
@@ -143,6 +160,6 @@ interface McpServerControllerApiDoc {
     @PostMapping("/{id}/probe")
     fun probe(
         @Parameter(description = "MCP server identifier", `in` = ParameterIn.PATH, required = true)
-        @PathVariable("id") id: UUID,
+        @PathVariable("id") id: Long,
     ): CommonHttpResponse<McpServerResponse>
 }

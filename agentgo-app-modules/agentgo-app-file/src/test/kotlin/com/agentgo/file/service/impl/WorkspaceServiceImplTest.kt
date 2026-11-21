@@ -5,6 +5,7 @@ import com.agentgo.dto.workspace.WorkspaceResponse
 import com.agentgo.dto.workspace.WorkspaceUpdateRequest
 import com.agentgo.file.entity.WorkspaceEntity
 import com.agentgo.file.exception.DuplicateWorkspaceNameException
+import com.agentgo.file.exception.InvalidWorkspaceRequestException
 import com.agentgo.file.exception.WorkspaceException
 import com.agentgo.file.exception.WorkspaceNotEmptyException
 import com.agentgo.file.exception.WorkspaceNotFoundException
@@ -12,7 +13,6 @@ import com.agentgo.file.mapper.WorkspaceMapper
 import com.agentgo.file.repository.WorkspaceRepository
 import com.agentgo.file.service.WorkspaceFileService
 import java.time.Instant
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -26,12 +26,21 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.SimpleTransactionStatus
 
 class WorkspaceServiceImplTest {
     private val workspaceRepository = mock<WorkspaceRepository>()
     private val workspaceMapper = mock<WorkspaceMapper>()
     private val workspaceFileService = mock<WorkspaceFileService>()
-    private val service = WorkspaceServiceImpl(workspaceRepository, workspaceMapper, workspaceFileService)
+    private val service = WorkspaceServiceImpl(
+        workspaceRepository,
+        workspaceMapper,
+        workspaceFileService,
+        PassThroughTransactionManager(),
+    )
 
     @AfterTest
     fun clearSecurityContext() {
@@ -46,9 +55,9 @@ class WorkspaceServiceImplTest {
             description = "Quarterly drafts"
         }
         val entity = WorkspaceEntity(ownerUserId = "ada", name = request.name, description = request.description)
-        val saved = entity.withId(UUID.randomUUID())
+        val saved = entity.withId(1L)
         val response = sampleResponse(saved.id!!, request.name, request.description)
-        whenever(workspaceRepository.existsByOwnerUserIdAndName("ada", "Reports")).thenReturn(false)
+        whenever(workspaceRepository.existsByGroupNameAndNameAndCreator("default", "Reports", "ada")).thenReturn(false)
         whenever(workspaceMapper.toEntity("ada", request)).thenReturn(entity)
         whenever(workspaceRepository.save(entity)).thenReturn(saved)
         whenever(workspaceMapper.toResponse(saved)).thenReturn(response)
@@ -60,7 +69,7 @@ class WorkspaceServiceImplTest {
     @Test
     fun `create rejects duplicate workspace name for same owner`() {
         authenticateAs("ada")
-        whenever(workspaceRepository.existsByOwnerUserIdAndName("ada", "Reports")).thenReturn(true)
+        whenever(workspaceRepository.existsByGroupNameAndNameAndCreator("default", "Reports", "ada")).thenReturn(true)
 
         assertFailsWith<DuplicateWorkspaceNameException> {
             service.create(WorkspaceCreateRequest().apply { name = "Reports" })
@@ -85,7 +94,7 @@ class WorkspaceServiceImplTest {
     @Test
     fun `get returns workspace owned by authenticated user`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 2L
         val entity = WorkspaceEntity(
             id = id,
             ownerUserId = "ada",
@@ -104,7 +113,7 @@ class WorkspaceServiceImplTest {
     @Test
     fun `get throws not found when workspace is missing for owner`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 3L
         whenever(workspaceRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(null)
 
         assertFailsWith<WorkspaceNotFoundException> { service.get(id) }
@@ -113,8 +122,8 @@ class WorkspaceServiceImplTest {
     @Test
     fun `list returns owner scoped workspaces ordered by repository`() {
         authenticateAs("ada")
-        val first = WorkspaceEntity(id = UUID.randomUUID(), ownerUserId = "ada", name = "A")
-        val second = WorkspaceEntity(id = UUID.randomUUID(), ownerUserId = "ada", name = "B")
+        val first = WorkspaceEntity(id = 4L, ownerUserId = "ada", name = "A")
+        val second = WorkspaceEntity(id = 5L, ownerUserId = "ada", name = "B")
         val firstResponse = sampleResponse(first.id!!, "A", null)
         val secondResponse = sampleResponse(second.id!!, "B", null)
         whenever(workspaceRepository.findByOwnerUserIdOrderByUpdatedAtDesc("ada")).thenReturn(listOf(first, second))
@@ -128,7 +137,7 @@ class WorkspaceServiceImplTest {
     @Test
     fun `update applies mapper changes and saves owned workspace`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 6L
         val entity = WorkspaceEntity(id = id, ownerUserId = "ada", name = "old")
         val update = WorkspaceUpdateRequest().apply {
             name = "new"
@@ -136,7 +145,7 @@ class WorkspaceServiceImplTest {
         }
         val response = sampleResponse(id, "new", "desc")
         whenever(workspaceRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
-        whenever(workspaceRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "new", id)).thenReturn(false)
+        whenever(workspaceRepository.existsByGroupNameAndNameAndCreatorAndIdNot("default", "new", "ada", id)).thenReturn(false)
         whenever(workspaceRepository.save(entity)).thenReturn(entity)
         whenever(workspaceMapper.toResponse(entity)).thenReturn(response)
 
@@ -148,10 +157,10 @@ class WorkspaceServiceImplTest {
     @Test
     fun `update rejects duplicate name against another owned workspace`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 7L
         val entity = WorkspaceEntity(id = id, ownerUserId = "ada", name = "old")
         whenever(workspaceRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
-        whenever(workspaceRepository.existsByOwnerUserIdAndNameAndIdNot("ada", "new", id)).thenReturn(true)
+        whenever(workspaceRepository.existsByGroupNameAndNameAndCreatorAndIdNot("default", "new", "ada", id)).thenReturn(true)
 
         assertFailsWith<DuplicateWorkspaceNameException> {
             service.update(
@@ -167,7 +176,7 @@ class WorkspaceServiceImplTest {
     @Test
     fun `delete removes empty owned workspace`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 8L
         val entity = WorkspaceEntity(id = id, ownerUserId = "ada", name = "Reports")
         whenever(workspaceRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
         whenever(workspaceFileService.hasFilesInWorkspace(id)).thenReturn(false)
@@ -180,7 +189,7 @@ class WorkspaceServiceImplTest {
     @Test
     fun `delete rejects workspace that still contains files`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 9L
         val entity = WorkspaceEntity(id = id, ownerUserId = "ada", name = "Reports")
         whenever(workspaceRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(entity)
         whenever(workspaceFileService.hasFilesInWorkspace(id)).thenReturn(true)
@@ -192,11 +201,59 @@ class WorkspaceServiceImplTest {
     @Test
     fun `delete throws not found when workspace is missing for owner`() {
         authenticateAs("ada")
-        val id = UUID.randomUUID()
+        val id = 10L
         whenever(workspaceRepository.findByIdAndOwnerUserId(id, "ada")).thenReturn(null)
 
         assertFailsWith<WorkspaceNotFoundException> { service.delete(id) }
         verify(workspaceFileService, never()).hasFilesInWorkspace(any())
+    }
+
+    @Test
+    fun `deleteAll removes every empty owned workspace`() {
+        authenticateAs("ada")
+        val first = WorkspaceEntity(id = 11L, ownerUserId = "ada", name = "One")
+        val second = WorkspaceEntity(id = 12L, ownerUserId = "ada", name = "Two")
+        whenever(workspaceRepository.findByIdAndOwnerUserId(11L, "ada")).thenReturn(first)
+        whenever(workspaceRepository.findByIdAndOwnerUserId(12L, "ada")).thenReturn(second)
+        whenever(workspaceFileService.hasFilesInWorkspace(11L)).thenReturn(false)
+        whenever(workspaceFileService.hasFilesInWorkspace(12L)).thenReturn(false)
+
+        service.deleteAll(listOf(11L, 12L))
+
+        verify(workspaceRepository).delete(first)
+        verify(workspaceRepository).delete(second)
+    }
+
+    @Test
+    fun `deleteAll deletes nothing when any workspace still contains files`() {
+        authenticateAs("ada")
+        val first = WorkspaceEntity(id = 11L, ownerUserId = "ada", name = "One")
+        val second = WorkspaceEntity(id = 12L, ownerUserId = "ada", name = "Two")
+        whenever(workspaceRepository.findByIdAndOwnerUserId(11L, "ada")).thenReturn(first)
+        whenever(workspaceRepository.findByIdAndOwnerUserId(12L, "ada")).thenReturn(second)
+        whenever(workspaceFileService.hasFilesInWorkspace(11L)).thenReturn(false)
+        whenever(workspaceFileService.hasFilesInWorkspace(12L)).thenReturn(true)
+
+        assertFailsWith<WorkspaceNotEmptyException> { service.deleteAll(listOf(11L, 12L)) }
+        verify(workspaceRepository, never()).delete(any<WorkspaceEntity>())
+    }
+
+    @Test
+    fun `deleteAll deletes nothing when an id is missing or the list is empty`() {
+        authenticateAs("ada")
+        whenever(workspaceRepository.findByIdAndOwnerUserId(11L, "ada")).thenReturn(null)
+
+        assertFailsWith<WorkspaceNotFoundException> { service.deleteAll(listOf(11L)) }
+        assertFailsWith<InvalidWorkspaceRequestException> { service.deleteAll(emptyList()) }
+        verify(workspaceRepository, never()).delete(any<WorkspaceEntity>())
+    }
+
+    private class PassThroughTransactionManager : PlatformTransactionManager {
+        override fun getTransaction(definition: TransactionDefinition?): TransactionStatus = SimpleTransactionStatus()
+
+        override fun commit(status: TransactionStatus) = Unit
+
+        override fun rollback(status: TransactionStatus) = Unit
     }
 
     private fun authenticateAs(userId: String) {
@@ -204,7 +261,7 @@ class WorkspaceServiceImplTest {
             UsernamePasswordAuthenticationToken(userId, "n/a", emptyList())
     }
 
-    private fun sampleResponse(id: UUID, name: String, description: String?): WorkspaceResponse =
+    private fun sampleResponse(id: Long, name: String, description: String?): WorkspaceResponse =
         WorkspaceResponse(
             id = id,
             name = name,
@@ -213,7 +270,7 @@ class WorkspaceServiceImplTest {
             updatedAt = Instant.parse("2026-01-02T00:00:00Z"),
         )
 
-    private fun WorkspaceEntity.withId(id: UUID): WorkspaceEntity =
+    private fun WorkspaceEntity.withId(id: Long): WorkspaceEntity =
         WorkspaceEntity(
             id = id,
             ownerUserId = ownerUserId,
