@@ -34,7 +34,7 @@ resource "authentik_application" "agentgo" {
   name              = var.application_name
   slug              = var.application_slug
   protocol_provider = authentik_provider_oauth2.agentgo.id
-  meta_launch_url   = "http://localhost:5173"
-  meta_icon         = "http://localhost:5173/assets/logo-dark.png"
+  meta_launch_url   = var.ui_base_url
+  meta_icon         = "${trimsuffix(var.ui_base_url, "/")}/assets/logo-dark.png"
   meta_description  = "AgentGo web application"
 }

@@ -1,8 +1,9 @@
-# AgentGo Authentik Terraform
+# AgentGo Authentik and MinIO Terraform
 
-This directory manages the Authentik objects used by AgentGo. It is intentionally
-separate from `local-deployment/`: Docker Compose runs Authentik and PostgreSQL,
-while Terraform configures Authentik through its API.
+This directory manages the Authentik objects and MinIO bucket used by AgentGo.
+It is intentionally separate from `local-deployment/`: Docker Compose runs
+Authentik, PostgreSQL, and MinIO, while Terraform configures Authentik through
+its API and creates the application bucket.
 
 ## What is managed
 
@@ -10,6 +11,7 @@ while Terraform configures Authentik through its API.
 - Identification, password, and user-login stages and their bindings.
 - Links from the login form to Authentik's default enrollment and recovery flows.
 - An OAuth2/OIDC provider and an AgentGo application.
+- The MinIO `agentgo-bucket` used by AgentGo file storage.
 
 The configuration creates its own authorization, invalidation, enrollment, and
 recovery flows. It does not depend on optional default-flow blueprints being
@@ -17,9 +19,13 @@ present after an Authentik installation.
 
 ## Prerequisites
 
-1. Start `local-deployment/` and complete Authentik's initial setup.
+1. Start `local-deployment/` (or the TEST Compose stack) and complete Authentik's initial setup.
 2. Create an Authentik API token with permission to manage flows and applications.
 3. Install Terraform 1.6 or newer.
+4. Provide MinIO admin credentials (`minio_user` / `minio_password`) for bucket creation.
+
+For the shared TEST host, use GitHub Actions **Terraform TEST** instead of applying
+from a laptop. See `environments/test/README.md`.
 
 The Authentik Terraform provider version is pinned to the `2026.8` minor line.
 Provider versions track Authentik releases; update the constraint deliberately
