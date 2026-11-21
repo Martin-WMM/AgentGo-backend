@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Base64
-import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,12 +55,12 @@ class AvatarServiceImplTest {
         val file = MockMultipartFile("file", "avatar.png", "image/png", byteArrayOf(1, 2, 3))
         val objectKey = avatarKey("ada", "png")
         val obsolete = FileEntity(
-            id = UUID.randomUUID(),
+            id = 1L,
             bucketName = properties.bucketName,
             objectKey = avatarKey("ada", "jpg"),
         )
         val entity = FileEntity(
-            id = UUID.randomUUID(),
+            id = 2L,
             bucketName = properties.bucketName,
             objectKey = objectKey,
             contentType = "image/png",
@@ -118,7 +117,7 @@ class AvatarServiceImplTest {
         val file = MockMultipartFile("file", "avatar.png", "image/png", byteArrayOf(9, 8, 7))
         val objectKey = avatarKey("ada", "png")
         val existing = FileEntity(
-            id = UUID.randomUUID(),
+            id = 3L,
             bucketName = properties.bucketName,
             objectKey = objectKey,
             contentType = "image/jpeg",
@@ -190,7 +189,7 @@ class AvatarServiceImplTest {
         authenticateAs("ada")
         val file = MockMultipartFile("file", "avatar.png", "image/png", byteArrayOf(1, 2, 3))
         val objectKey = avatarKey("ada", "png")
-        val existing = FileEntity(id = UUID.randomUUID(), bucketName = properties.bucketName, objectKey = objectKey)
+        val existing = FileEntity(id = 4L, bucketName = properties.bucketName, objectKey = objectKey)
         whenever(fileRepository.findByBucketNameAndObjectKey(properties.bucketName, objectKey)).thenReturn(existing)
         whenever(fileService.putObject(eq(objectKey), any(), eq("image/png"), any())).thenReturn("etag-1")
         whenever(
@@ -212,7 +211,7 @@ class AvatarServiceImplTest {
         authenticateAs("ada")
         val objectKey = avatarKey("ada", "png")
         val entity = FileEntity(
-            id = UUID.randomUUID(),
+            id = 5L,
             bucketName = properties.bucketName,
             objectKey = objectKey,
             contentType = "image/png",
