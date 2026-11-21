@@ -2,6 +2,7 @@ package com.agentgo.file.controller.apidoc
 
 import com.agentgo.commons.api.ApiPaths
 import com.agentgo.commons.dto.http.response.CommonHttpResponse
+import com.agentgo.dto.file.BatchPathsRequest
 import com.agentgo.dto.file.FileMetadataResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -13,7 +14,9 @@ import org.springframework.core.io.ByteArrayResource
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
@@ -128,4 +131,21 @@ interface FileControllerApiDoc {
         )
         @RequestParam("path") path: String,
     ): ResponseEntity<Void>
+
+    @Operation(
+        summary = "Delete workspace files",
+        description = "Deletes every listed file in one transaction and returns HTTP 204. " +
+            "An empty list, more than 100 paths, an invalid path, or any missing file rejects " +
+            "the request and deletes nothing. Objects are removed from storage after commit.",
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Workspace files deleted"),
+            ApiResponse(responseCode = "400", description = "Invalid workspace path (FILE-013)"),
+            ApiResponse(responseCode = "401", description = "Authentication required (AUTH-002)"),
+            ApiResponse(responseCode = "404", description = "File not found (FILE-005)"),
+        ],
+    )
+    @PostMapping("/workspace/batch-delete")
+    fun deleteWorkspaces(@RequestBody request: BatchPathsRequest): ResponseEntity<Void>
 }
