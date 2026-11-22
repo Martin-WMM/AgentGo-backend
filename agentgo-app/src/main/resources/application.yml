@@ -34,6 +34,11 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/agentgo}
     username: ${DATABASE_USERNAME:agentgo}
     password: ${DATABASE_PASSWORD:agentgo}
+    hikari:
+      # Agent checkpoint writes share this pool; keep headroom above the default 10
+      # so concurrent graph workers do not starve JPA under load.
+      maximum-pool-size: ${DATABASE_POOL_SIZE:20}
+      leak-detection-threshold: ${DATABASE_LEAK_DETECTION_MS:30000}
   jpa:
     open-in-view: false
     hibernate:
@@ -87,6 +92,10 @@ agentgo:
     authentik-api-token: ${AGENTGO_AUTHENTIK_API_TOKEN:}
     authentik-browser-base-url: ${AGENTGO_AUTHENTIK_BROWSER_BASE_URL:http://localhost:9000}
     authentik-application-slug: ${AGENTGO_AUTHENTIK_APPLICATION_SLUG:agentgo}
+  agent:
+    model-id: ${AGENTGO_AGENT_MODEL_ID:qwen3.8-27b}
+    qwen-api-key: ${AGENTGO_AGENT_QWEN_API_KEY:}
+    qwen-base-url: ${AGENTGO_AGENT_QWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
   file:
     # Prefer 127.0.0.1 on Windows: localhost can resolve to ::1 and hang while MinIO listens on IPv4.
     minio-endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9001}
