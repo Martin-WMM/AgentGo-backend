@@ -154,6 +154,7 @@ class DefaultCliProcessRunner(
             "agentgo" to "agentgo",
             "echo" to "echo",
             "ping" to "ping",
+            "printenv" to "printenv",
             "sleep" to "sleep",
         )
 

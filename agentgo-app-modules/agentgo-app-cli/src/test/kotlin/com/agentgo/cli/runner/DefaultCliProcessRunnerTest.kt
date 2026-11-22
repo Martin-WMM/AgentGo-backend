@@ -152,9 +152,11 @@ class DefaultCliProcessRunnerTest {
 
     private fun echoEnvScript(variable: String): String =
         if (isWindows()) {
+            // cmd.exe expands %VAR% for the echo builtin after /c.
             "echo %$variable%"
         } else {
-            "echo \$$variable"
+            // No shell expansion: printenv reads the process environment directly.
+            "printenv $variable"
         }
 
     private fun sleepScript(): String =
