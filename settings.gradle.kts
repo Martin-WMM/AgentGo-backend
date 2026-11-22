@@ -26,6 +26,7 @@ include(
     ":agentgo-commons",
     ":agentgo-core",
     ":agentgo-dto",
+    ":agentgo-dto:agentgo-dto-agent",
     ":agentgo-dto:agentgo-dto-models",
     ":agentgo-dto:agentgo-dto-mcp",
     ":agentgo-dto:agentgo-dto-a2a",
@@ -33,6 +34,7 @@ include(
     ":agentgo-dto:agentgo-dto-settings",
     ":agentgo-dto:agentgo-dto-cli",
     ":agentgo-dto:agentgo-dto-events",
+    ":agentgo-dto:agentgo-dto-chat",
     ":agentgo-app-modules:agentgo-app-models",
     ":agentgo-app-modules:agentgo-app-mcp-servers",
     ":agentgo-app-modules:agentgo-app-a2a",
@@ -40,6 +42,7 @@ include(
     ":agentgo-app-modules:agentgo-app-settings",
     ":agentgo-app-modules:agentgo-app-cli",
     ":agentgo-app-modules:agentgo-app-events",
+    ":agentgo-app-modules:agentgo-app-chat",
 
     ":agentgo-springboot-starter",
     ":agentgo-cli",
