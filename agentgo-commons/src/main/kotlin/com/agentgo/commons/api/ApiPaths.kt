@@ -27,6 +27,9 @@ object ApiPaths {
     /** Authenticated user system-settings singleton under v1. */
     const val V1_SETTINGS: String = "/api/v1/settings"
 
+    /** One-shot CLI / shell execution endpoints under v1. */
+    const val V1_CLI: String = "/api/v1/cli"
+
     /** Global system-event log under v1. */
     const val V1_SYSTEM_EVENTS: String = "/api/v1/systemEvents"
 
@@ -56,6 +59,9 @@ object ApiPaths {
 
     /** Ant-style matcher for all v1 system-event routes (security). */
     const val V1_SYSTEM_EVENTS_ANT: String = "/api/v1/systemEvents/**"
+
+    /** Ant-style matcher for all v1 CLI routes (security). */
+    const val V1_CLI_ANT: String = "/api/v1/cli/**"
 
     /** Servlet URL pattern for the upload-size filter. */
     const val V1_FILES_URL_PATTERN: String = "/api/v1/files/*"

@@ -88,6 +88,7 @@ class SecurityConfig(
                     ApiPaths.V1_MCP_SERVERS_ANT,
                     ApiPaths.V1_A2A_AGENTS_ANT,
                     ApiPaths.V1_SETTINGS,
+                    ApiPaths.V1_CLI_ANT,
                     ApiPaths.V1_WORKSPACES_ANT,
                 )
             }

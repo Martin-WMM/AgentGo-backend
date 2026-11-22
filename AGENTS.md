@@ -26,6 +26,7 @@ module-local version literals when a version is already defined there.
 - `agentgo-app-modules:agentgo-app-mcp-servers`: Authenticated user-owned MCP Streamable HTTP server CRUD and probe.
 - `agentgo-app-modules:agentgo-app-a2a`: Authenticated user-owned A2A sub-agent CRUD. The description vector is a deterministic feature hash recomputed when the description changes.
 - `agentgo-app-modules:agentgo-app-settings`: Per-user system settings that configure AgentGo clients.
+- `agentgo-app-modules:agentgo-app-cli`: Authenticated one-shot CLI / shell execution for the SPA console. A fixed worker pool (default 10) is created at startup; each request borrows one worker. Scripts are checked by a command allow/deny policy (`agentgo.cli.allowed-commands` / `denied-commands`, shell operators blocked by default) before start. Durable audit rows live in `tbl_cli_execution`.
 - `agentgo-app-modules:agentgo-app-events`: Global system event log. Authenticated clients can create, read, update, and delete events. Retention keeps only the newest 1,000 events from the last three months. Business modules record durable mutations with `@RecordSystemEvent` (or `SystemEventRecorder`) using `SystemEventDomains` constants.
 - `agentgo-cli`: Executable Spring Shell command-line application for the `agentgo ...`
   command family.
@@ -37,6 +38,7 @@ module-local version literals when a version is already defined there.
 - `agentgo-dto:agentgo-dto-mcp`: Request and response DTOs for user-owned MCP Streamable HTTP servers.
 - `agentgo-dto:agentgo-dto-a2a`: Request and response DTOs for user-owned A2A sub-agents.
 - `agentgo-dto:agentgo-dto-settings`: Request and response DTOs for per-user system settings.
+- `agentgo-dto:agentgo-dto-cli`: Request and response DTOs for CLI execution.
 - `agentgo-dto:agentgo-dto-events`: Request and response DTOs for the global system event log.
 - `agentgo-springboot-starter`: Reusable Spring Boot auto-configuration, foundational beans,
   and shared infrastructure configuration.

@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":agentgo-app-modules:agentgo-app-a2a"))
     implementation(project(":agentgo-app-modules:agentgo-app-prompts"))
     implementation(project(":agentgo-app-modules:agentgo-app-settings"))
+    implementation(project(":agentgo-app-modules:agentgo-app-cli"))
     implementation(project(":agentgo-app-modules:agentgo-app-events"))
 
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))

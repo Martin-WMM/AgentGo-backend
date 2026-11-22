@@ -25,6 +25,9 @@ object SystemEventDomains {
     /** Per-user AgentGo client settings. */
     const val SETTINGS = "settings"
 
+    /** Authenticated CLI / shell executions. */
+    const val CLI = "cli"
+
     /** Authentication and session lifecycle. */
     const val AUTH = "auth"
 
