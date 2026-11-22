@@ -112,6 +112,38 @@ class DefaultCliProcessRunnerTest {
     }
 
     @Test
+    fun `windows date uses slash t so it does not wait for interactive input`() {
+        if (!isWindows()) return
+
+        var launched: List<String> = emptyList()
+        val capturingRunner = DefaultCliProcessRunner(
+            properties = CliProperties(timeoutMs = 5_000, maxStdoutChars = 10_000, maxStderrChars = 10_000),
+            processStarter = { builder ->
+                launched = builder.command()
+                ProcessBuilder("cmd.exe", "/c", "echo ok").start()
+            },
+        )
+
+        val outcome = capturingRunner.run("date", emptyMap())
+
+        assertEquals(CliExecutionStatus.COMPLETED, outcome.status)
+        assertTrue(launched.take(3) == listOf("cmd.exe", "/c", "date") || launched.contains("date"))
+        assertTrue(launched.any { it.equals("/t", ignoreCase = true) })
+    }
+
+    @Test
+    fun `windows date completes quickly without timing out`() {
+        if (!isWindows()) return
+
+        val outcome = runner.run("date", emptyMap())
+
+        assertEquals(CliExecutionStatus.COMPLETED, outcome.status)
+        assertEquals(0, outcome.exitCode)
+        assertTrue(outcome.stdout.isNotBlank())
+        assertTrue(outcome.durationMs < 5_000)
+    }
+
+    @Test
     fun `decodes windows console bytes with the native charset instead of utf8`() {
         if (!isWindows()) return
 
