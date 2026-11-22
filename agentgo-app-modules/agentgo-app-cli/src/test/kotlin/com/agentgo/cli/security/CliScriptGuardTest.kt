@@ -20,6 +20,15 @@ class CliScriptGuardTest {
     }
 
     @Test
+    fun `allows default helper commands used by agent bash tools`() {
+        guard.validate("echo hello")
+        guard.validate("date")
+        guard.validate("printenv PATH")
+        guard.validate("python3")
+        guard.validate("python -c print(1)")
+    }
+
+    @Test
     fun `rejects denied destructive commands`() {
         val exception = assertFailsWith<ForbiddenCliCommandException> {
             guard.validate("rm -rf /tmp/x")
