@@ -91,7 +91,13 @@ class DefaultCliProcessRunner(
             command.add("/c")
         }
         command.add(executable)
-        command.addAll(arguments)
+        // Windows `date` without /t prompts to change the system clock and hangs until input.
+        // Always force display-only mode for the AgentGo CLI allow-listed date helper.
+        if (commandName == "date" && isWindows) {
+            command.add("/t")
+        } else {
+            command.addAll(arguments)
+        }
         return ProcessBuilder(command)
     }
 
@@ -153,9 +159,12 @@ class DefaultCliProcessRunner(
         val DEFAULT_FIXED_EXECUTABLES: Map<String, String> = mapOf(
             "agentgo" to "agentgo",
             "echo" to "echo",
+            "date" to "date",
             "ping" to "ping",
             "printenv" to "printenv",
             "sleep" to "sleep",
+            "python3" to "python3",
+            "python" to "python",
         )
 
         /**
