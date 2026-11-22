@@ -28,6 +28,9 @@ object SystemEventDomains {
     /** Authenticated CLI / shell executions. */
     const val CLI = "cli"
 
+    /** User-owned chat sessions and messages. */
+    const val CHAT = "chat"
+
     /** Authentication and session lifecycle. */
     const val AUTH = "auth"
 

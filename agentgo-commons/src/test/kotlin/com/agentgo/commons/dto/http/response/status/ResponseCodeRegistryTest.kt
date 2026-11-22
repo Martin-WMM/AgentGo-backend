@@ -106,6 +106,15 @@ class ResponseCodeRegistryTest {
             "The authenticated user's system settings were saved successfully.",
             ResponseCodeRegistry.description(9401)?.meaning,
         )
+        assertEquals("CHAT-001", ResponseCodeRegistry.responseType(10101))
+        assertEquals("CHAT-002", ResponseCodeRegistry.responseType(10102))
+        assertEquals("CHAT-LIST-RETRIEVED", ResponseCodeRegistry.responseType(10200))
+        assertEquals("CHAT-CREATED", ResponseCodeRegistry.responseType(10201))
+        assertEquals("CHAT-MESSAGES-RETRIEVED", ResponseCodeRegistry.responseType(10205))
+        assertEquals(
+            "A chat session was created successfully.",
+            ResponseCodeRegistry.description(10201)?.meaning,
+        )
         assertEquals("MCP-001", ResponseCodeRegistry.responseType(9501))
         assertEquals("MCP-006", ResponseCodeRegistry.responseType(9506))
         assertEquals("MCP-CREATED", ResponseCodeRegistry.responseType(9601))

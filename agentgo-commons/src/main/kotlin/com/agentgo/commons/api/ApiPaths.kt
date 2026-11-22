@@ -30,6 +30,12 @@ object ApiPaths {
     /** One-shot CLI / shell execution endpoints under v1. */
     const val V1_CLI: String = "/api/v1/cli"
 
+    /** Agent stream endpoint under v1. */
+    const val V1_AGENT: String = "/api/v1/agent"
+
+    /** Chat session endpoints under v1. */
+    const val V1_CHAT_SESSIONS: String = "/api/v1/chatSessions"
+
     /** Global system-event log under v1. */
     const val V1_SYSTEM_EVENTS: String = "/api/v1/systemEvents"
 
@@ -62,6 +68,12 @@ object ApiPaths {
 
     /** Ant-style matcher for all v1 CLI routes (security). */
     const val V1_CLI_ANT: String = "/api/v1/cli/**"
+
+    /** Ant-style matcher for all v1 agent routes (security). */
+    const val V1_AGENT_ANT: String = "/api/v1/agent/**"
+
+    /** Ant-style matcher for all v1 chat session routes (security). */
+    const val V1_CHAT_SESSIONS_ANT: String = "/api/v1/chatSessions/**"
 
     /** Servlet URL pattern for the upload-size filter. */
     const val V1_FILES_URL_PATTERN: String = "/api/v1/files/*"

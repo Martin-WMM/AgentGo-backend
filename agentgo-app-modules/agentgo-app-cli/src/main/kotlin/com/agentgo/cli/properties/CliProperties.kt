@@ -21,11 +21,26 @@ data class CliProperties(
     val maxStderrChars: Int = 200_000,
     val poolSize: Int = 10,
     val acquireTimeoutMs: Long = 5_000,
-    val allowedCommands: List<String> = emptyList(),
+    val allowedCommands: List<String> = DEFAULT_ALLOWED_COMMANDS,
     val deniedCommands: List<String> = DEFAULT_DENIED_COMMANDS,
     val denyShellOperators: Boolean = true,
 ) {
     companion object {
+        /**
+         * Default allowlist aligned with [com.agentgo.cli.runner.DefaultCliProcessRunner]
+         * fixed executables so Agent Bash tools can run safe read-only helpers.
+         */
+        val DEFAULT_ALLOWED_COMMANDS: List<String> = listOf(
+            "agentgo",
+            "echo",
+            "date",
+            "ping",
+            "printenv",
+            "sleep",
+            "python3",
+            "python",
+        )
+
         /**
          * Built-in denylist covering destructive, privilege-escalation, nested-shell,
          * and remote-download helpers commonly abused through one-shot shell APIs.
@@ -37,7 +52,7 @@ data class CliProperties(
             "shutdown", "reboot", "poweroff", "halt", "init",
             "sudo", "su", "runas", "doas",
             "bash", "sh", "zsh", "fish", "powershell", "pwsh", "cmd", "cscript", "wscript",
-            "python", "python3", "perl", "ruby", "node", "nodejs", "php", "lua",
+            "perl", "ruby", "node", "nodejs", "php", "lua",
             "chmod", "chown", "chgrp",
             "kill", "killall", "taskkill", "pskill",
             "reg", "regedit", "regedt32",
