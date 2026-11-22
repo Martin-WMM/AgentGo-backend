@@ -2,8 +2,10 @@ package com.agentgo.commons.dto.http.response.status
 
 import com.agentgo.commons.dto.http.response.status.error.ErrorResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.A2aResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.CliResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.AuthResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.BaseResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.ChatResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.EventsResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.FileResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.McpResponseCodeRegistry
@@ -30,7 +32,9 @@ object ResponseCodeRegistry {
         putAll(McpResponseCodeRegistry.responseTypesByCode)
         putAll(A2aResponseCodeRegistry.responseTypesByCode)
         putAll(SettingsResponseCodeRegistry.responseTypesByCode)
+        putAll(CliResponseCodeRegistry.responseTypesByCode)
         putAll(EventsResponseCodeRegistry.responseTypesByCode)
+        putAll(ChatResponseCodeRegistry.responseTypesByCode)
         putAll(ErrorResponseCodeRegistry.responseTypesByCode)
     }
 
@@ -49,7 +53,9 @@ object ResponseCodeRegistry {
                 ?: McpResponseCodeRegistry.codeDescriptions[type]
                 ?: A2aResponseCodeRegistry.codeDescriptions[type]
                 ?: SettingsResponseCodeRegistry.codeDescriptions[type]
+                ?: CliResponseCodeRegistry.codeDescriptions[type]
                 ?: EventsResponseCodeRegistry.codeDescriptions[type]
+                ?: ChatResponseCodeRegistry.codeDescriptions[type]
                 ?: ErrorResponseCodeRegistry.description(type)
         }
 }

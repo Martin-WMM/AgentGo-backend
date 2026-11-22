@@ -23,7 +23,9 @@ dependencies {
     implementation(project(":agentgo-app-modules:agentgo-app-a2a"))
     implementation(project(":agentgo-app-modules:agentgo-app-prompts"))
     implementation(project(":agentgo-app-modules:agentgo-app-settings"))
+    implementation(project(":agentgo-app-modules:agentgo-app-cli"))
     implementation(project(":agentgo-app-modules:agentgo-app-events"))
+    implementation(project(":agentgo-app-modules:agentgo-app-chat"))
 
     testImplementation(platform("org.springframework.boot:spring-boot-dependencies:${rootProject.extra["springBootVersion"]}"))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

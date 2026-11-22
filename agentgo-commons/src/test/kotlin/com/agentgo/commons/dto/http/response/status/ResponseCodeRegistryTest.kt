@@ -2,6 +2,7 @@ package com.agentgo.commons.dto.http.response.status
 
 import com.agentgo.commons.dto.http.response.status.error.ErrorResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.A2aResponseCodeRegistry
+import com.agentgo.commons.dto.http.response.status.success.CliResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.EventsResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.FileResponseCodeRegistry
 import com.agentgo.commons.dto.http.response.status.success.McpResponseCodeRegistry
@@ -26,6 +27,10 @@ class ResponseCodeRegistryTest {
         assertEquals("MCP", ErrorResponseCodeRegistry.description("MCP-006")?.category)
         assertEquals("EVENT", ErrorResponseCodeRegistry.description("EVENT-001")?.category)
         assertEquals("EVENT", ErrorResponseCodeRegistry.description("EVENT-002")?.category)
+        assertEquals("CLI", ErrorResponseCodeRegistry.description("CLI-001")?.category)
+        assertEquals("CLI", ErrorResponseCodeRegistry.description("CLI-002")?.category)
+        assertEquals("CLI", ErrorResponseCodeRegistry.description("CLI-003")?.category)
+        assertEquals("CLI", ErrorResponseCodeRegistry.description("CLI-004")?.category)
         assertEquals("A2A", ErrorResponseCodeRegistry.description("A2A-001")?.category)
         assertEquals("A2A", ErrorResponseCodeRegistry.description("A2A-003")?.category)
     }
@@ -51,6 +56,10 @@ class ResponseCodeRegistryTest {
         assertEquals(
             "SETTINGS",
             SettingsResponseCodeRegistry.codeDescriptions[SettingsResponseCodeRegistry.RETRIEVED_TYPE]?.category,
+        )
+        assertEquals(
+            "CLI",
+            CliResponseCodeRegistry.codeDescriptions[CliResponseCodeRegistry.EXECUTED_TYPE]?.category,
         )
         assertEquals(
             "MCP",
@@ -88,9 +97,23 @@ class ResponseCodeRegistryTest {
         )
         assertEquals("SETTINGS-RETRIEVED", ResponseCodeRegistry.responseType(9400))
         assertEquals("SETTINGS-UPDATED", ResponseCodeRegistry.responseType(9401))
+        assertEquals("CLI-EXECUTED", ResponseCodeRegistry.responseType(9300))
+        assertEquals("CLI-001", ResponseCodeRegistry.responseType(9301))
+        assertEquals("CLI-002", ResponseCodeRegistry.responseType(9302))
+        assertEquals("CLI-003", ResponseCodeRegistry.responseType(9303))
+        assertEquals("CLI-004", ResponseCodeRegistry.responseType(9304))
         assertEquals(
             "The authenticated user's system settings were saved successfully.",
             ResponseCodeRegistry.description(9401)?.meaning,
+        )
+        assertEquals("CHAT-001", ResponseCodeRegistry.responseType(10101))
+        assertEquals("CHAT-002", ResponseCodeRegistry.responseType(10102))
+        assertEquals("CHAT-LIST-RETRIEVED", ResponseCodeRegistry.responseType(10200))
+        assertEquals("CHAT-CREATED", ResponseCodeRegistry.responseType(10201))
+        assertEquals("CHAT-MESSAGES-RETRIEVED", ResponseCodeRegistry.responseType(10205))
+        assertEquals(
+            "A chat session was created successfully.",
+            ResponseCodeRegistry.description(10201)?.meaning,
         )
         assertEquals("MCP-001", ResponseCodeRegistry.responseType(9501))
         assertEquals("MCP-006", ResponseCodeRegistry.responseType(9506))

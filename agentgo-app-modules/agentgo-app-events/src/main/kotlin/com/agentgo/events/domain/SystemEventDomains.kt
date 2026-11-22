@@ -25,6 +25,12 @@ object SystemEventDomains {
     /** Per-user AgentGo client settings. */
     const val SETTINGS = "settings"
 
+    /** Authenticated CLI / shell executions. */
+    const val CLI = "cli"
+
+    /** User-owned chat sessions and messages. */
+    const val CHAT = "chat"
+
     /** Authentication and session lifecycle. */
     const val AUTH = "auth"
 
