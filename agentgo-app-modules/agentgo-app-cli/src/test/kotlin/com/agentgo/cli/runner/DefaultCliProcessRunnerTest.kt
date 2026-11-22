@@ -3,7 +3,10 @@ package com.agentgo.cli.runner
 import com.agentgo.cli.exception.CliFailedToStartException
 import com.agentgo.cli.properties.CliProperties
 import com.agentgo.dto.cli.CliExecutionStatus
+import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.io.OutputStream
+import java.nio.charset.Charset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -63,11 +66,23 @@ class DefaultCliProcessRunnerTest {
 
     @Test
     fun `truncates stderr to configured limit`() {
+        val charset = DefaultCliProcessRunner.platformOutputCharset()
         val limitedRunner = DefaultCliProcessRunner(
-            CliProperties(timeoutMs = 10_000, maxStdoutChars = 200_000, maxStderrChars = 4),
+            properties = CliProperties(timeoutMs = 10_000, maxStdoutChars = 200_000, maxStderrChars = 4),
+            processStarter = {
+                object : Process() {
+                    override fun getOutputStream(): OutputStream = OutputStream.nullOutputStream()
+                    override fun getInputStream() = ByteArrayInputStream(ByteArray(0))
+                    override fun getErrorStream() =
+                        ByteArrayInputStream("abcdefghijklmnop".toByteArray(charset))
+                    override fun waitFor(): Int = 0
+                    override fun exitValue(): Int = 0
+                    override fun destroy() = Unit
+                }
+            },
         )
 
-        val outcome = limitedRunner.run(stderrScript("abcdefghijklmnop"), emptyMap())
+        val outcome = limitedRunner.run(echoScript("unused"), emptyMap())
 
         assertEquals(CliExecutionStatus.COMPLETED, outcome.status)
         assertEquals(4, outcome.stderr.length)
@@ -89,22 +104,46 @@ class DefaultCliProcessRunnerTest {
     }
 
     @Test
+    fun `rejects executables outside the fixed map before spawn`() {
+        val exception = assertFailsWith<CliFailedToStartException> {
+            runner.run("rm -rf /tmp/x", emptyMap())
+        }
+        assertTrue(exception.message.contains("not permitted"))
+    }
+
+    @Test
     fun `decodes windows console bytes with the native charset instead of utf8`() {
         if (!isWindows()) return
 
-        // cmd prints Chinese "不是内部或外部命令..." in the OEM/native charset when a
-        // missing command is invoked. Decoding as UTF-8 would produce U+FFFD glyphs.
-        val outcome = runner.run("agentgo-missing-command-xyz", emptyMap())
+        val native = DefaultCliProcessRunner.platformOutputCharset()
+        val gbkMessage = "不是内部或外部命令"
+        val runnerWithMissing = DefaultCliProcessRunner(
+            properties = CliProperties(timeoutMs = 10_000, maxStdoutChars = 10_000, maxStderrChars = 10_000),
+            fixedExecutables = mapOf("nosuchcli" to "nosuchcli-agentgo-xyz"),
+            processStarter = {
+                object : Process() {
+                    override fun getOutputStream(): OutputStream = OutputStream.nullOutputStream()
+                    override fun getInputStream() = ByteArrayInputStream(ByteArray(0))
+                    override fun getErrorStream() =
+                        ByteArrayInputStream(gbkMessage.toByteArray(native))
+                    override fun waitFor(): Int = 1
+                    override fun exitValue(): Int = 1
+                    override fun destroy() = Unit
+                }
+            },
+        )
+
+        val outcome = runnerWithMissing.run("nosuchcli", emptyMap())
 
         assertEquals(CliExecutionStatus.COMPLETED, outcome.status)
         assertTrue(outcome.exitCode != 0)
         assertFalse(outcome.stderr.contains('\uFFFD'))
-        assertTrue(
-            outcome.stderr.contains("不是内部或外部命令") ||
-                outcome.stderr.contains("不是外部命令") ||
-                outcome.stderr.lowercase().contains("not recognized") ||
-                outcome.stderr.contains("agentgo-missing-command-xyz"),
-        )
+        assertTrue(outcome.stderr.contains(gbkMessage))
+        // Prove UTF-8 would have corrupted the same bytes on a non-UTF8 native charset.
+        if (!native.name().equals("UTF-8", ignoreCase = true)) {
+            val mojibake = String(gbkMessage.toByteArray(native), Charset.forName("UTF-8"))
+            assertTrue(mojibake.contains('\uFFFD') || mojibake != gbkMessage)
+        }
     }
 
     private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("win")
@@ -120,10 +159,8 @@ class DefaultCliProcessRunnerTest {
 
     private fun sleepScript(): String =
         if (isWindows()) {
-            "ping -n 6 127.0.0.1 >nul"
+            "ping -n 6 127.0.0.1"
         } else {
             "sleep 5"
         }
-
-    private fun stderrScript(text: String): String = "echo $text 1>&2"
 }

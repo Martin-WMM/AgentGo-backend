@@ -21,7 +21,7 @@ data class CliProperties(
     val maxStderrChars: Int = 200_000,
     val poolSize: Int = 10,
     val acquireTimeoutMs: Long = 5_000,
-    val allowedCommands: List<String> = emptyList(),
+    val allowedCommands: List<String> = listOf("agentgo"),
     val deniedCommands: List<String> = DEFAULT_DENIED_COMMANDS,
     val denyShellOperators: Boolean = true,
 ) {
